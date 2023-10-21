@@ -1,0 +1,23 @@
+-- Uncomment this to debug instructions being run.
+-- ## DEBUG = true
+
+require 'machine'
+require 'C.arg'
+require 'C.stdlib'
+
+if C.argc ~= 2 then
+  print('please supply a RV64I program to run!')
+  C.exit(1)
+end
+local filename = C.argv[1]
+
+local machine: Machine
+
+-- Load RISC-V program.
+machine:loadfile(filename)
+
+-- Run the instructions until exit or on error.
+machine:run()
+
+-- Exit returning the program exit code.
+C.exit((@cint)(machine.exitcode))

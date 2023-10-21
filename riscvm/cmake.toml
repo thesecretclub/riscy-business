@@ -1,0 +1,7 @@
+# Reference: https://build-cpp.github.io/cmkr/cmake-toml
+[project]
+name = "riscvm"
+
+[target.riscvm]
+type = "executable"
+sources = ["riscvm.c"]

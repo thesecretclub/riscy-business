@@ -1,0 +1,10 @@
+*.S
+*.o
+*.out
+riscvm
+
+# cmkr
+build*/
+cmake-build*/
+.idea/
+.vscode/
