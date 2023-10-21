@@ -1,0 +1,5 @@
+- https://refspecs.linuxfoundation.org/LSB_3.1.0/LSB-Core-IA64/LSB-Core-IA64/sections.html
+- https://man7.org/linux/man-pages/man5/elf.5.html
+- https://docs.oracle.com/cd/E19957-01/806-0641/6j9vuqujs/index.html#chapter6-tbl-53
+- https://llvm.org/doxygen/BinaryFormat_2ELF_8h_source.html
+- https://sites.uclouvain.be/SystInfo/usr/include/linux/elf.h.html
