@@ -41,7 +41,7 @@ static inline int32_t win_syscall0(int32_t id)
   register int32_t windows_id asm("s11") = id;
 
   register uint64_t _a0 asm("a0") = 0;
-  
+
   asm volatile ("scall" : "+r"(windows_id) : "r"(syscall_id));
   return _a0;
 }
@@ -270,7 +270,7 @@ static inline long syscall0(long n) {
   register long syscall_id asm("s10") = n;
 
   register long a0 asm("a0") = 0;
-  
+
   asm volatile ("scall" : "+r"(a0) : "r"(syscall_id));
   return a0;
 }
