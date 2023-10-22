@@ -88,19 +88,8 @@ struct machine_Machine
     uint8_t memory[ 134217728 ];
     int64_t exitcode;
 };
-typedef struct nlstring nlstring;
 typedef uint8_t* nluint8_arr0_ptr;
-struct nlstring
-{
-    nluint8_arr0_ptr data;
-    uintptr_t size;
-};
-static void machine_Machine_loadfile( machine_Machine_ptr self, nlstring filename );
 typedef FILE* FILE_ptr;
-static NELUA_INLINE char* nelua_string2cstring( nlstring s );
-static NELUA_INLINE void nelua_write_stderr( const char* msg, uintptr_t len, bool flush );
-static NELUA_NORETURN void nelua_abort( void );
-static NELUA_NORETURN void nelua_panic_string( nlstring s );
 typedef struct NELUA_MAYALIAS nluint8_arr134217728
 {
     uint8_t v[ 134217728 ];
@@ -134,64 +123,23 @@ static NELUA_INLINE void machine_Machine_write_2( machine_Machine_ptr self, uint
 static NELUA_INLINE void machine_Machine_write_3( machine_Machine_ptr self, uint64_t addr, uint32_t val );
 static NELUA_INLINE void machine_Machine_write_4( machine_Machine_ptr self, uint64_t addr, uint64_t val );
 static uint64_t machine_Machine_handle_syscall( machine_Machine_ptr self, uint64_t code );
-static void nelua_print_1( char* a1 );
-static void nelua_print_2( int64_t a1 );
 static NELUA_INLINE void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst );
 static NELUA_INLINE int64_t nelua_shl_nlint64( int64_t a, int64_t b );
 static NELUA_INLINE int64_t nelua_shr_nlint64( int64_t a, int64_t b );
 static NELUA_INLINE int64_t nelua_asr_nlint64( int64_t a, int64_t b );
 static NELUA_INLINE __int128 nelua_shr_nlint128( __int128 a, __int128 b );
 static NELUA_NOINLINE void machine_Machine_run( machine_Machine_ptr self );
-static int nelua_argc;
-typedef char** nlcstring_arr0_ptr;
-static nlcstring_arr0_ptr nelua_argv;
-static void nelua_print_3( nlstring a1 );
-static char* riscvm_filename;
-static machine_Machine riscvm_machine;
-static NELUA_INLINE nlstring nelua_cstring2string( const char* s );
-static int nelua_main( int argc, char** argv );
 
 #define get_reg(x) ( int64_t )( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ x ]
 
 /* ------------------------------ DEFINITIONS ------------------------------- */
-char* nelua_string2cstring( nlstring s )
+#define panic(...) do { printf(__VA_ARGS__); __debugbreak(); } while(0)
+void machine_Machine_loadfile( machine_Machine_ptr self, const char* filename )
 {
-    return ( s.size == 0 ) ? ( char* )"" : ( char* )s.data;
-}
-void nelua_write_stderr( const char* msg, uintptr_t len, bool flush )
-{
-    if( len > 0 && msg )
-    {
-        fwrite( msg, 1, len, stderr );
-    }
-    if( flush )
-    {
-        fwrite( "\n", 1, 1, stderr );
-        fflush( stderr );
-    }
-}
-void nelua_abort( void )
-{
-    NELUA_UBSAN_UNREACHABLE();
-    abort();
-}
-void nelua_panic_string( nlstring s )
-{
-    if( s.size > 0 )
-    {
-        nelua_write_stderr( ( const char* )s.data, s.size, true );
-    }
-    nelua_abort();
-}
-void machine_Machine_loadfile( machine_Machine_ptr self, nlstring filename )
-{
-    FILE_ptr fp = fopen( nelua_string2cstring( filename ), "rb" );
+    FILE_ptr fp = fopen( filename, "rb" );
     if( ( !( fp != NULL ) ) )
     {
-        nelua_panic_string( ( ( nlstring )
-        {
-            ( uint8_t* )"failed to open file", 19
-        } ) );
+        puts("failed to open file");
     }
     fseek( fp, 0, SEEK_END );
     long size = ftell( fp );
@@ -654,10 +602,7 @@ NELUA_INLINE uint64_t machine_Machine_handle_syscall( machine_Machine_ptr self, 
     }
     case 10001:
     {
-        nelua_panic_string( ( ( nlstring )
-        {
-            ( uint8_t* )"aborted!", 8
-        } ) );
+        panic("aborted!");
         break;
     }
     case 10006:
@@ -772,10 +717,8 @@ NELUA_INLINE uint64_t machine_Machine_handle_syscall( machine_Machine_ptr self, 
     }
     default:
     {
-        nelua_panic_string( ( ( nlstring )
-        {
-            ( uint8_t* )"illegal system call", 19
-        } ) );
+        printf("illegal system call %llu (0x%llX)\n", code, code);
+        __debugbreak();
         break;
     }
     }
@@ -898,10 +841,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
         }
         default:
         {
-            nelua_panic_string( ( ( nlstring )
-            {
-                ( uint8_t* )"illegal load instruction", 24
-            } ) );
+            panic("illegal load instruction");
             break;
         }
         }
@@ -941,10 +881,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
         }
         default:
         {
-            nelua_panic_string( ( ( nlstring )
-            {
-                ( uint8_t* )"illegal store instruction", 25
-            } ) );
+            panic("illegal store instruction");
             break;
         }
         }
@@ -1014,10 +951,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
             }
             default:
             {
-                nelua_panic_string( ( ( nlstring )
-                {
-                    ( uint8_t* )"illegal op-imm shift instruction", 32
-                } ) );
+                panic("illegal op-imm shift instruction");
                 break;
             }
             }
@@ -1035,10 +969,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
         }
         default:
         {
-            nelua_panic_string( ( ( nlstring )
-            {
-                ( uint8_t* )"illegal op-imm instruction", 26
-            } ) );
+            panic("illegal op-imm instruction");
             break;
         }
         }
@@ -1083,10 +1014,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
             }
             default:
             {
-                nelua_panic_string( ( ( nlstring )
-                {
-                    ( uint8_t* )"illegal op-imm-32 shift instruction", 35
-                } ) );
+                panic("illegal op-imm-32 shift instruction");
                 break;
             }
             }
@@ -1094,10 +1022,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
         }
         default:
         {
-            nelua_panic_string( ( ( nlstring )
-            {
-                ( uint8_t* )"illegal op-imm-32 instruction", 29
-            } ) );
+            panic("illegal op-imm-32 instruction");
             break;
         }
         }
@@ -1266,10 +1191,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
         }
         default:
         {
-            nelua_panic_string( ( ( nlstring )
-            {
-                ( uint8_t* )"illegal op instruction", 22
-            } ) );
+            panic("illegal op instruction");
             break;
         }
         }
@@ -1384,10 +1306,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
         }
         default:
         {
-            nelua_panic_string( ( ( nlstring )
-            {
-                ( uint8_t* )"illegal op-32 instruction", 25
-            } ) );
+            panic("illegal op-32 instruction");
             break;
         }
         }
@@ -1443,7 +1362,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
         int64_t imm = ( int64_t )( ( ( int32_t )( ( uint32_t )( int32_t )( ( ( ( ( inst >> 19 ) & 4096 ) | ( ( inst >> 20 ) & 2016 ) ) | ( ( inst >> 7 ) & 30 ) ) | ( ( inst << 4 ) & 2048 ) ) << 19 ) ) >> 19 );
         uint64_t val1 = ( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ rs1 ];
         uint64_t val2 = ( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ rs2 ];
-        bool cond;
+        bool cond = 0;
         switch( funct3 )
         {
         case 0x0:
@@ -1478,10 +1397,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
         }
         default:
         {
-            nelua_panic_string( ( ( nlstring )
-            {
-                ( uint8_t* )"illegal branch instruction", 26
-            } ) );
+            panic("illegal branch instruction");
             break;
         }
         }
@@ -1503,7 +1419,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
         {
         case 0x0:
         {
-            uint64_t code = ( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 17 ];
+            uint64_t code = get_reg(17);
             ( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 10 ] = machine_Machine_handle_syscall( self, code );
             break;
         }
@@ -1515,10 +1431,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
         }
         default:
         {
-            nelua_panic_string( ( ( nlstring )
-            {
-                ( uint8_t* )"illegal system instruction", 26
-            } ) );
+            panic("illegal system instruction");
             break;
         }
         }
@@ -1526,10 +1439,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
     }
     default:
     {
-        nelua_panic_string( ( ( nlstring )
-        {
-            ( uint8_t* )"illegal instruction", 19
-        } ) );
+        panic("illegal instruction");
         break;
     }
     }
@@ -1541,63 +1451,23 @@ void machine_Machine_run( machine_Machine_ptr self )
     while( NELUA_LIKELY( self->running ) )
     {
         uint32_t inst = machine_Machine_fetch( self );
-        unsigned char* p_inst = ( unsigned char* )&inst;
 
+        //unsigned char* p_inst = ( unsigned char* )&inst;
         //printf("pc: 0x%08x, inst: %02x %02x %02x %02x\n", self->pc, p_inst[0], p_inst[1], p_inst[2], p_inst[3]);
 
         machine_Machine_execute( self, inst );
     }
 }
-void nelua_print_3( nlstring a1 )
-{
-    if( a1.size > 0 )
-    {
-        fwrite( a1.data, 1, a1.size, stdout );
-    }
-    fputs( "\n", stdout );
-    fflush( stdout );
-}
-nlstring nelua_cstring2string( const char* s )
-{
-    if( s == NULL )
-    {
-        return ( nlstring )
-        {
-            0
-        };
-    }
-    uintptr_t size = strlen( s );
-    if( size == 0 )
-    {
-        return ( nlstring )
-        {
-            0
-        };
-    }
-    return ( nlstring )
-    {
-        ( uint8_t* )s, size
-    };
-}
-int nelua_main( int argc, char** argv )
-{
-    nelua_argc = argc;
-    nelua_argv = argv;
-    if( ( nelua_argc != 2 ) )
-    {
-        nelua_print_3( ( ( nlstring )
-        {
-            ( uint8_t* )"please supply a RV64I program to run!", 37
-        } ) );
-        exit( 1 );
-    }
-    riscvm_filename = nelua_argv[ 1 ];
-    machine_Machine_loadfile( ( &riscvm_machine ), nelua_cstring2string( riscvm_filename ) );
-    machine_Machine_run( ( &riscvm_machine ) );
-    exit( ( int )riscvm_machine.exitcode );
-    return 0;
-}
 int main( int argc, char** argv )
 {
-    return nelua_main( argc, argv );
+    if( ( argc != 2 ) )
+    {
+        puts("please supply a RV64I program to run!");
+        return EXIT_FAILURE;
+    }
+    machine_Machine_ptr machine = malloc(sizeof(machine_Machine));
+    machine_Machine_loadfile(machine, argv[1]);
+    machine_Machine_run(machine);
+    exit( ( int )machine->exitcode );
+    return EXIT_SUCCESS;
 }
