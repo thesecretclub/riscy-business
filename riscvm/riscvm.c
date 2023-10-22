@@ -707,18 +707,14 @@ NELUA_INLINE uint64_t machine_Machine_handle_syscall( machine_Machine_ptr self, 
             }
             default:
             {
-                nelua_panic_string( ( ( nlstring )
-                {
-                    ( uint8_t* )"too many arguments for windows syscall", 38
-                } ) );
+                panic("too many arguments for windows syscall");
                 break;
             }
         }
     }
     default:
     {
-        printf("illegal system call %llu (0x%llX)\n", code, code);
-        __debugbreak();
+        panic("illegal system call %llu (0x%llX)\n", code, code);
         break;
     }
     }
