@@ -699,158 +699,76 @@ NELUA_INLINE uint64_t machine_Machine_handle_syscall( machine_Machine_ptr self, 
     }
     case 20000:
     {
-        return ( uint64_t )syscall_0_stub( ( uint32_t )get_reg(27) );
-    }
-    case 20001:
-    {
-        return ( uint64_t )syscall_1_stub( ( uint32_t )get_reg(27), get_reg(10) );
-    }
-    case 20002:
-    {
-        return ( uint64_t )syscall_2_stub( ( uint32_t )get_reg(27), get_reg(10), get_reg(11) );
-    }
-    case 20003:
-    {
-        return ( uint64_t )syscall_3_stub( ( uint32_t )get_reg(27), get_reg(10), get_reg(11), get_reg(12) );
-    }
-    case 20004:
-    {
-        return ( uint64_t )syscall_4_stub( ( uint32_t )get_reg(27), get_reg(10), get_reg(11), get_reg(12), get_reg(13) );
-    }
-    case 20005:
-    {
-        return ( uint64_t )syscall_5_stub( 
-            ( uint32_t )get_reg(27), 
-            get_reg(10), 
-            get_reg(11), 
-            get_reg(12), 
-            get_reg(13), 
-            get_reg(14) 
-        );
-    }
-    case 20006:
-    {
-        return ( uint64_t )syscall_6_stub(
-            ( uint32_t )get_reg(27),
-            get_reg(10),
-            get_reg(11),
-            get_reg(12),
-            get_reg(13),
-            get_reg(14),
-            get_reg(15) 
-        );
-    }
-    case 20007:
-    {
-        return ( uint64_t )syscall_7_stub( 
-            ( uint32_t )get_reg(27), 
-            get_reg(10), 
-            get_reg(11), 
-            get_reg(12), 
-            get_reg(13), 
-            get_reg(14), 
-            get_reg(15),
-            get_reg(16) 
-        );
-    }
-    case 20008:
-    {
-        return ( uint64_t )syscall_8_stub( 
-            ( uint32_t )get_reg(27), 
-            get_reg(10), 
-            get_reg(11), 
-            get_reg(12), 
-            get_reg(13), 
-            get_reg(14), 
-            get_reg(15),
-            get_reg(16),
-            get_reg(17)
-        );
-    }
-    case 20009:
-    {
-        return ( uint64_t )syscall_9_stub( 
-            ( uint32_t )get_reg(27), 
-            get_reg(10), 
-            get_reg(11), 
-            get_reg(12), 
-            get_reg(13), 
-            get_reg(14), 
-            get_reg(15),
-            get_reg(16),
-            get_reg(17),
-            get_reg(18)
-        );
-    }
-    case 20010:
-    {
-        return ( uint64_t )syscall_10_stub( 
-            ( uint32_t )get_reg(27), 
-            get_reg(10), 
-            get_reg(11), 
-            get_reg(12), 
-            get_reg(13), 
-            get_reg(14), 
-            get_reg(15),
-            get_reg(16),
-            get_reg(17),
-            get_reg(18),
-            get_reg(19)
-        );
-    }
-    case 20011:
-    {
-        return ( uint64_t )syscall_11_stub( 
-            ( uint32_t )get_reg(27), 
-            get_reg(10), 
-            get_reg(11), 
-            get_reg(12), 
-            get_reg(13), 
-            get_reg(14), 
-            get_reg(15),
-            get_reg(16),
-            get_reg(17),
-            get_reg(18),
-            get_reg(19),
-            get_reg(20)
-        );
-    }
-    case 20012:
-    {
-        return ( uint64_t )syscall_12_stub( 
-            ( uint32_t )get_reg(27), 
-            get_reg(10), 
-            get_reg(11), 
-            get_reg(12), 
-            get_reg(13), 
-            get_reg(14), 
-            get_reg(15),
-            get_reg(16),
-            get_reg(17),
-            get_reg(18),
-            get_reg(19),
-            get_reg(20),
-            get_reg(21)
-        );
-    }
-    case 20013:
-    {
-        return ( uint64_t )syscall_13_stub( 
-            ( uint32_t )get_reg(27), 
-            get_reg(10), 
-            get_reg(11), 
-            get_reg(12), 
-            get_reg(13), 
-            get_reg(14), 
-            get_reg(15),
-            get_reg(16),
-            get_reg(17),
-            get_reg(18),
-            get_reg(19),
-            get_reg(20),
-            get_reg(21),
-            get_reg(22)
-        );
+        uint32_t id = ( uint32_t )get_reg(10);
+        uint64_t* args = ( uint64_t* )machine_Machine_getptr( self, get_reg(11) );
+        size_t nargs = ( size_t )get_reg(12);
+        switch( nargs )
+        {
+            case 0:
+            {
+                return ( uint64_t )syscall_0_stub( id );
+            }
+            case 1:
+            {
+                return ( uint64_t )syscall_1_stub( id, args[0] );
+            }
+            case 2:
+            {
+                return ( uint64_t )syscall_2_stub( id, args[0], args[1] );
+            }
+            case 3:
+            {
+                return ( uint64_t )syscall_3_stub( id, args[0], args[1], args[2] );
+            }
+            case 4:
+            {
+                return ( uint64_t )syscall_4_stub( id, args[0], args[1], args[2], args[3] );
+            }
+            case 5:
+            {
+                return ( uint64_t )syscall_5_stub( id, args[0], args[1], args[2], args[3], args[4] );
+            }
+            case 6:
+            {
+                return ( uint64_t )syscall_6_stub( id, args[0], args[1], args[2], args[3], args[4], args[5] );
+            }
+            case 7:
+            {
+                return ( uint64_t )syscall_7_stub( id, args[0], args[1], args[2], args[3], args[4], args[5], args[6] );
+            }
+            case 8:
+            {
+                return ( uint64_t )syscall_8_stub( id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7] );
+            }
+            case 9:
+            {
+                return ( uint64_t )syscall_9_stub( id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8] );
+            }
+            case 10:
+            {
+                return ( uint64_t )syscall_10_stub( id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9] );
+            }
+            case 11:
+            {
+                return ( uint64_t )syscall_11_stub( id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10] );
+            }
+            case 12:
+            {
+                return ( uint64_t )syscall_12_stub( id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11] );
+            }
+            case 13:
+            {
+                return ( uint64_t )syscall_13_stub( id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12] );
+            }
+            default:
+            {
+                nelua_panic_string( ( ( nlstring )
+                {
+                    ( uint8_t* )"too many arguments for windows syscall", 38
+                } ) );
+                break;
+            }
+        }
     }
     default:
     {
@@ -1585,7 +1503,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
         {
         case 0x0:
         {
-            uint64_t code = ( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 26 ];
+            uint64_t code = ( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 17 ];
             ( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 10 ] = machine_Machine_handle_syscall( self, code );
             break;
         }
