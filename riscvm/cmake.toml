@@ -5,3 +5,4 @@ name = "riscvm"
 [target.riscvm]
 type = "executable"
 sources = ["riscvm.c"]
+clang-cl.compile-options = ["/clang:-fno-jump-tables"]
