@@ -33,6 +33,7 @@ SECTIONS
 	}
 
     .relocs : ALIGN(16) {
+		. = . + SIZEOF(.bss);
         __relocs_start = .;
     }
 }

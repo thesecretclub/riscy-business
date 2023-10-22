@@ -1,4 +1,4 @@
-#include "syscalls.h"
+#include "../riscvm_lib/syscalls.h"
 
 bool is_prime[10000000+1];
 

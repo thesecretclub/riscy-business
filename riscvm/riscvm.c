@@ -2,6 +2,7 @@
 /* Compile command: gcc -x c "riscvm.c" -x none -pipe -fwrapv -fno-strict-aliasing -g -lm -o "riscvm" */
 /* Compile hash: 3yRF316SvDmqYnDkveN73j7PiY2f */
 /* ------------------------------ DIRECTIVES -------------------------------- */
+#define _CRT_SECURE_NO_WARNINGS
 #define NELUA_NIL (nlniltype){}
 #include <stdio.h>
 #include <string.h>
@@ -149,6 +150,9 @@ static char* riscvm_filename;
 static machine_Machine riscvm_machine;
 static NELUA_INLINE nlstring nelua_cstring2string( const char* s );
 static int nelua_main( int argc, char** argv );
+
+#define get_reg(x) ( int64_t )( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ x ]
+
 /* ------------------------------ DEFINITIONS ------------------------------- */
 char* nelua_string2cstring( nlstring s )
 {
@@ -645,7 +649,7 @@ NELUA_INLINE uint64_t machine_Machine_handle_syscall( machine_Machine_ptr self, 
     case 10000:
     {
         self->running = false;
-        self->exitcode = ( int64_t )( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 10 ];
+        self->exitcode = get_reg(10);
         break;
     }
     case 10001:
@@ -658,188 +662,178 @@ NELUA_INLINE uint64_t machine_Machine_handle_syscall( machine_Machine_ptr self, 
     }
     case 10007:
     {
-        void* dest = machine_Machine_getptr( self, ( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 10 ] );
-        uint64_t c = ( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 11 ];
-        uint64_t len = ( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 12 ];
-        void* res = memset( dest, ( int )c, ( size_t )len );
+        void* dest = machine_Machine_getptr( self, get_reg(10) );
+        void* res = memset( dest, ( int )get_reg(11), ( size_t )get_reg(12) );
         return ( uint64_t )res;
     }
     case 10101:
     {
-        char* s = ( char* )machine_Machine_getptr( self, ( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 10 ] );
+        char* s = ( char* )machine_Machine_getptr( self, get_reg(10) );
         nelua_print_1( s );
         break;
     }
     case 10102:
     {
-        int64_t i = ( int64_t )( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 10 ];
-        nelua_print_2( i );
+        nelua_print_2( get_reg(10) );
         break;
     }
     case 20000:
     {
-        uint32_t id = ( uint32_t )( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 27 ];
-        return ( uint64_t )syscall_0_stub( id );
+        return ( uint64_t )syscall_0_stub( ( uint32_t )get_reg(27) );
     }
     case 20001:
     {
-        uint32_t id = ( uint32_t )( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 27 ];
-        uint64_t a1 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 10 ];
-        return ( uint64_t )syscall_1_stub( id, a1 );
+        return ( uint64_t )syscall_1_stub( ( uint32_t )get_reg(27), get_reg(10) );
     }
     case 20002:
     {
-        uint32_t id = ( uint32_t )( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 27 ];
-        uint64_t a1 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 10 ];
-        uint64_t a2 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 11 ];
-        return ( uint64_t )syscall_2_stub( id, a1, a2 );
+        return ( uint64_t )syscall_2_stub( ( uint32_t )get_reg(27), get_reg(10), get_reg(11) );
     }
     case 20003:
     {
-        uint32_t id = ( uint32_t )( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 27 ];
-        uint64_t a1 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 10 ];
-        uint64_t a2 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 11 ];
-        uint64_t a3 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 12 ];
-        return ( uint64_t )syscall_3_stub( id, a1, a2, a3 );
+        return ( uint64_t )syscall_3_stub( ( uint32_t )get_reg(27), get_reg(10), get_reg(11), get_reg(12) );
     }
     case 20004:
     {
-        uint32_t id = ( uint32_t )( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 27 ];
-        uint64_t a1 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 10 ];
-        uint64_t a2 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 11 ];
-        uint64_t a3 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 12 ];
-        uint64_t a4 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 13 ];
-        return ( uint64_t )syscall_4_stub( id, a1, a2, a3, a4 );
+        return ( uint64_t )syscall_4_stub( ( uint32_t )get_reg(27), get_reg(10), get_reg(11), get_reg(12), get_reg(13) );
     }
     case 20005:
     {
-        uint32_t id = ( uint32_t )( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 27 ];
-        uint64_t a1 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 10 ];
-        uint64_t a2 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 11 ];
-        uint64_t a3 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 12 ];
-        uint64_t a4 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 13 ];
-        uint64_t a5 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 14 ];
-        return ( uint64_t )syscall_5_stub( id, a1, a2, a3, a4, a5 );
+        return ( uint64_t )syscall_5_stub( 
+            ( uint32_t )get_reg(27), 
+            get_reg(10), 
+            get_reg(11), 
+            get_reg(12), 
+            get_reg(13), 
+            get_reg(14) 
+        );
     }
     case 20006:
     {
-        uint32_t id = ( uint32_t )( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 27 ];
-        uint64_t a1 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 10 ];
-        uint64_t a2 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 11 ];
-        uint64_t a3 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 12 ];
-        uint64_t a4 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 13 ];
-        uint64_t a5 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 14 ];
-        uint64_t a6 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 15 ];
-        return ( uint64_t )syscall_6_stub( id, a1, a2, a3, a4, a5, a6 );
+        return ( uint64_t )syscall_6_stub(
+            ( uint32_t )get_reg(27),
+            get_reg(10),
+            get_reg(11),
+            get_reg(12),
+            get_reg(13),
+            get_reg(14),
+            get_reg(15) 
+        );
     }
     case 20007:
     {
-        uint32_t id = ( uint32_t )( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 27 ];
-        uint64_t a1 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 10 ];
-        uint64_t a2 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 11 ];
-        uint64_t a3 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 12 ];
-        uint64_t a4 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 13 ];
-        uint64_t a5 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 14 ];
-        uint64_t a6 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 15 ];
-        uint64_t a7 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 16 ];
-        return ( uint64_t )syscall_7_stub( id, a1, a2, a3, a4, a5, a6, a7 );
+        return ( uint64_t )syscall_7_stub( 
+            ( uint32_t )get_reg(27), 
+            get_reg(10), 
+            get_reg(11), 
+            get_reg(12), 
+            get_reg(13), 
+            get_reg(14), 
+            get_reg(15),
+            get_reg(16) 
+        );
     }
     case 20008:
     {
-        uint32_t id = ( uint32_t )( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 27 ];
-        uint64_t a1 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 10 ];
-        uint64_t a2 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 11 ];
-        uint64_t a3 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 12 ];
-        uint64_t a4 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 13 ];
-        uint64_t a5 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 14 ];
-        uint64_t a6 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 15 ];
-        uint64_t a7 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 16 ];
-        uint64_t a8 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 17 ];
-        return ( uint64_t )syscall_8_stub( id, a1, a2, a3, a4, a5, a6, a7, a8 );
+        return ( uint64_t )syscall_8_stub( 
+            ( uint32_t )get_reg(27), 
+            get_reg(10), 
+            get_reg(11), 
+            get_reg(12), 
+            get_reg(13), 
+            get_reg(14), 
+            get_reg(15),
+            get_reg(16),
+            get_reg(17)
+        );
     }
     case 20009:
     {
-        uint32_t id = ( uint32_t )( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 27 ];
-        uint64_t a1 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 10 ];
-        uint64_t a2 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 11 ];
-        uint64_t a3 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 12 ];
-        uint64_t a4 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 13 ];
-        uint64_t a5 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 14 ];
-        uint64_t a6 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 15 ];
-        uint64_t a7 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 16 ];
-        uint64_t a8 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 17 ];
-        uint64_t a9 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 18 ];
-        return ( uint64_t )syscall_9_stub( id, a1, a2, a3, a4, a5, a6, a7, a8, a9 );
+        return ( uint64_t )syscall_9_stub( 
+            ( uint32_t )get_reg(27), 
+            get_reg(10), 
+            get_reg(11), 
+            get_reg(12), 
+            get_reg(13), 
+            get_reg(14), 
+            get_reg(15),
+            get_reg(16),
+            get_reg(17),
+            get_reg(18)
+        );
     }
     case 20010:
     {
-        uint32_t id = ( uint32_t )( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 27 ];
-        uint64_t a1 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 10 ];
-        uint64_t a2 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 11 ];
-        uint64_t a3 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 12 ];
-        uint64_t a4 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 13 ];
-        uint64_t a5 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 14 ];
-        uint64_t a6 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 15 ];
-        uint64_t a7 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 16 ];
-        uint64_t a8 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 17 ];
-        uint64_t a9 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 18 ];
-        uint64_t a10 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 19 ];
-        return ( uint64_t )syscall_10_stub( id, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10 );
+        return ( uint64_t )syscall_10_stub( 
+            ( uint32_t )get_reg(27), 
+            get_reg(10), 
+            get_reg(11), 
+            get_reg(12), 
+            get_reg(13), 
+            get_reg(14), 
+            get_reg(15),
+            get_reg(16),
+            get_reg(17),
+            get_reg(18),
+            get_reg(19)
+        );
     }
     case 20011:
     {
-        uint32_t id = ( uint32_t )( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 27 ];
-        uint64_t a1 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 10 ];
-        uint64_t a2 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 11 ];
-        uint64_t a3 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 12 ];
-        uint64_t a4 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 13 ];
-        uint64_t a5 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 14 ];
-        uint64_t a6 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 15 ];
-        uint64_t a7 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 16 ];
-        uint64_t a8 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 17 ];
-        uint64_t a9 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 18 ];
-        uint64_t a10 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 19 ];
-        uint64_t a11 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 20 ];
-        return ( uint64_t )syscall_11_stub( id, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11 );
+        return ( uint64_t )syscall_11_stub( 
+            ( uint32_t )get_reg(27), 
+            get_reg(10), 
+            get_reg(11), 
+            get_reg(12), 
+            get_reg(13), 
+            get_reg(14), 
+            get_reg(15),
+            get_reg(16),
+            get_reg(17),
+            get_reg(18),
+            get_reg(19),
+            get_reg(20)
+        );
     }
     case 20012:
     {
-        uint32_t id = ( uint32_t )( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 27 ];
-        uint64_t a1 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 10 ];
-        uint64_t a2 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 11 ];
-        uint64_t a3 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 12 ];
-        uint64_t a4 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 13 ];
-        uint64_t a5 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 14 ];
-        uint64_t a6 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 15 ];
-        uint64_t a7 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 16 ];
-        uint64_t a8 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 17 ];
-        uint64_t a9 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 18 ];
-        uint64_t a10 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 19 ];
-        uint64_t a11 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 20 ];
-        uint64_t a12 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 21 ];
-        return ( uint64_t )syscall_12_stub( id, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12 );
+        return ( uint64_t )syscall_12_stub( 
+            ( uint32_t )get_reg(27), 
+            get_reg(10), 
+            get_reg(11), 
+            get_reg(12), 
+            get_reg(13), 
+            get_reg(14), 
+            get_reg(15),
+            get_reg(16),
+            get_reg(17),
+            get_reg(18),
+            get_reg(19),
+            get_reg(20),
+            get_reg(21)
+        );
     }
     case 20013:
     {
-        uint32_t id = ( uint32_t )( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ 27 ];
-        uint64_t a1 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 10 ];
-        uint64_t a2 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 11 ];
-        uint64_t a3 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 12 ];
-        uint64_t a4 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 13 ];
-        uint64_t a5 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 14 ];
-        uint64_t a6 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 15 ];
-        uint64_t a7 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 16 ];
-        uint64_t a8 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 17 ];
-        uint64_t a9 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 18 ];
-        uint64_t a10 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 19 ];
-        uint64_t a11 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 20 ];
-        uint64_t a12 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 21 ];
-        uint64_t a13 = ( ( nluint64_arr32_cast* )&self->regs )->a.v[ 22 ];
-        return ( uint64_t )syscall_13_stub( id, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13 );
+        return ( uint64_t )syscall_13_stub( 
+            ( uint32_t )get_reg(27), 
+            get_reg(10), 
+            get_reg(11), 
+            get_reg(12), 
+            get_reg(13), 
+            get_reg(14), 
+            get_reg(15),
+            get_reg(16),
+            get_reg(17),
+            get_reg(18),
+            get_reg(19),
+            get_reg(20),
+            get_reg(21),
+            get_reg(22)
+        );
     }
     default:
     {
-        printf( "code: %d\n", code );
         nelua_panic_string( ( ( nlstring )
         {
             ( uint8_t* )"illegal system call", 19
@@ -1498,6 +1492,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
         int64_t imm = ( int64_t )( ( ( int32_t )( ( uint32_t )( int32_t )( ( inst >> 20 ) & 4095 ) << 20 ) ) >> 20 );
         int64_t pc = ( self->pc + 4 );
         self->pc = ( ( int64_t )( ( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ rs1 ] + imm ) & -2 );
+        printf("jalr: pc = %llx\n", self->pc);
         if( NELUA_UNLIKELY( ( rd != 0 ) ) )
         {
             ( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ rd ] = ( uint64_t )pc;
@@ -1593,7 +1588,6 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
     }
     default:
     {
-        printf( "opcode: %x\n", opcode );
         nelua_panic_string( ( ( nlstring )
         {
             ( uint8_t* )"illegal instruction", 19
@@ -1609,6 +1603,10 @@ void machine_Machine_run( machine_Machine_ptr self )
     while( NELUA_LIKELY( self->running ) )
     {
         uint32_t inst = machine_Machine_fetch( self );
+        unsigned char* p_inst = ( unsigned char* )&inst;
+
+        printf("pc: 0x%08x, inst: %02x %02x %02x %02x\n", self->pc, p_inst[0], p_inst[1], p_inst[2], p_inst[3]);
+
         machine_Machine_execute( self, inst );
     }
 }
