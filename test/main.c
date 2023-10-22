@@ -2,21 +2,25 @@
 
 char myData[] = "Hello, World!";
 
- __attribute__((noinline)) void lfsr16_obfuscate(char *s, int length, unsigned short seed) {
+__attribute__((noinline)) void lfsr16_obfuscate(char* s, int length, unsigned short seed)
+{
     int i, lsb;
 
-    for (i=0; i<length; i++) {
+    for (i = 0; i < length; i++)
+    {
         s[i] ^= seed & 0x00ff;
         lsb = seed & 1;
         seed >>= 1;
-        if (lsb) seed ^= 0xB400u;
+        if (lsb)
+            seed ^= 0xB400u;
     }
 }
 
 int bb();
 int bb2();
 
-__attribute((noinline)) int main() {
+__attribute((noinline)) int main()
+{
     int x = bb() + bb2();
     lfsr16_obfuscate(myData, sizeof(myData) - 1, 1337 + x);
     return 42;

@@ -1,0 +1,52 @@
+BasedOnStyle: LLVM
+Standard: c++20
+
+IndentWidth: 4
+AccessModifierOffset: -2
+ColumnLimit: 110
+
+AlignAfterOpenBracket: BlockIndent
+
+AlignConsecutiveAssignments: true
+AlignConsecutiveBitFields: true
+AlignConsecutiveDeclarations: true
+AlignConsecutiveMacros: true
+
+AlignEscapedNewlines: Left
+
+AlignOperands: AlignAfterOperator
+
+AlignTrailingComments: true
+
+AllowAllArgumentsOnNextLine: true
+AllowAllConstructorInitializersOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+
+AllowShortBlocksOnASingleLine: Never
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: false
+AlwaysBreakTemplateDeclarations: MultiLine
+
+BinPackArguments: false
+BinPackParameters: false
+
+BitFieldColonSpacing: Both
+
+BreakBeforeBraces: Allman
+
+BreakBeforeBinaryOperators: NonAssignment
+
+BreakConstructorInitializers: BeforeComma
+PackConstructorInitializers: CurrentLine
+
+SortIncludes: false
+PointerAlignment: Left
+
+PenaltyExcessCharacter: 5
+PenaltyBreakAssignment: 10

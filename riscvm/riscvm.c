@@ -11,18 +11,22 @@
 #ifdef _DEBUG
 
 #define HAS_TRACE
-static bool g_trace = false;
-static int g_trace_calldepth = 0;
+static bool g_trace           = false;
+static int  g_trace_calldepth = 0;
 
 #define NELUA_INLINE
-#define trace(...) do { \
-    if(g_trace) { \
-        for(int i = 0; i < g_trace_calldepth; i++) { \
-            printf("  "); \
-        } \
-        printf("[trace] " __VA_ARGS__); \
-    } \
-} while(0)
+#define trace(...)                                      \
+    do                                                  \
+    {                                                   \
+        if (g_trace)                                    \
+        {                                               \
+            for (int i = 0; i < g_trace_calldepth; i++) \
+            {                                           \
+                printf("  ");                           \
+            }                                           \
+            printf("[trace] " __VA_ARGS__);             \
+        }                                               \
+    } while (0)
 
 #else
 
@@ -53,8 +57,12 @@ static int g_trace_calldepth = 0;
 #define NELUA_UBSAN_UNREACHABLE __builtin_unreachable
 #endif
 #elif defined(__gnu_linux__) && defined(__GNUC__) && __GNUC__ >= 5
-NELUA_EXTERN void __ubsan_handle_builtin_unreachable( void* ) __attribute__( ( weak ) );
-#define NELUA_UBSAN_UNREACHABLE() {if(&__ubsan_handle_builtin_unreachable) __builtin_unreachable();}
+NELUA_EXTERN void __ubsan_handle_builtin_unreachable(void*) __attribute__((weak));
+#define NELUA_UBSAN_UNREACHABLE()                \
+    {                                            \
+        if (&__ubsan_handle_builtin_unreachable) \
+            __builtin_unreachable();             \
+    }
 #endif
 #ifndef NELUA_UBSAN_UNREACHABLE
 #define NELUA_UBSAN_UNREACHABLE()
@@ -97,43 +105,43 @@ NELUA_EXTERN void __ubsan_handle_builtin_unreachable( void* ) __attribute__( ( w
 #endif
 /* ------------------------------ DECLARATIONS ------------------------------ */
 typedef struct machine_Machine machine_Machine;
-typedef machine_Machine* machine_Machine_ptr;
+typedef machine_Machine*       machine_Machine_ptr;
 struct machine_Machine
 {
-    bool running;
-    int64_t pc;
-    uint64_t regs[ 32 ];
-    int64_t exitcode;
+    bool     running;
+    int64_t  pc;
+    uint64_t regs[32];
+    int64_t  exitcode;
 };
-static NELUA_INLINE uint32_t machine_Machine_fetch( machine_Machine_ptr self );
-static NELUA_INLINE int8_t machine_Machine_read_int8( machine_Machine_ptr self, uint64_t addr );
-static NELUA_INLINE int16_t machine_Machine_read_int16( machine_Machine_ptr self, uint64_t addr );
-static NELUA_INLINE int32_t machine_Machine_read_int32( machine_Machine_ptr self, uint64_t addr );
-static NELUA_INLINE int64_t machine_Machine_read_int64( machine_Machine_ptr self, uint64_t addr );
-static NELUA_INLINE uint8_t machine_Machine_read_uint8( machine_Machine_ptr self, uint64_t addr );
-static NELUA_INLINE uint16_t machine_Machine_read_uint16( machine_Machine_ptr self, uint64_t addr );
-static NELUA_INLINE uint32_t machine_Machine_read_uint32( machine_Machine_ptr self, uint64_t addr );
-static NELUA_INLINE void* machine_Machine_getptr( machine_Machine_ptr self, uint64_t addr );
-static NELUA_INLINE void machine_Machine_write_uint8( machine_Machine_ptr self, uint64_t addr, uint8_t val );
-static NELUA_INLINE void machine_Machine_write_uint16( machine_Machine_ptr self, uint64_t addr, uint16_t val );
-static NELUA_INLINE void machine_Machine_write_uint32( machine_Machine_ptr self, uint64_t addr, uint32_t val );
-static NELUA_INLINE void machine_Machine_write_uint64( machine_Machine_ptr self, uint64_t addr, uint64_t val );
-static uint64_t machine_Machine_handle_syscall( machine_Machine_ptr self, uint64_t code );
-static NELUA_INLINE void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst );
-static NELUA_INLINE int64_t machine_Machine_shl_nlint64( int64_t a, int64_t b );
-static NELUA_INLINE int64_t machine_Machine_shr_nlint64( int64_t a, int64_t b );
-static NELUA_INLINE int64_t machine_Machine_asr_nlint64( int64_t a, int64_t b );
-static NELUA_INLINE __int128 machine_Machine_shr_nlint128( __int128 a, __int128 b );
-static NELUA_NOINLINE void machine_Machine_run( machine_Machine_ptr self );
+static NELUA_INLINE uint32_t machine_Machine_fetch(machine_Machine_ptr self);
+static NELUA_INLINE int8_t   machine_Machine_read_int8(machine_Machine_ptr self, uint64_t addr);
+static NELUA_INLINE int16_t  machine_Machine_read_int16(machine_Machine_ptr self, uint64_t addr);
+static NELUA_INLINE int32_t  machine_Machine_read_int32(machine_Machine_ptr self, uint64_t addr);
+static NELUA_INLINE int64_t  machine_Machine_read_int64(machine_Machine_ptr self, uint64_t addr);
+static NELUA_INLINE uint8_t  machine_Machine_read_uint8(machine_Machine_ptr self, uint64_t addr);
+static NELUA_INLINE uint16_t machine_Machine_read_uint16(machine_Machine_ptr self, uint64_t addr);
+static NELUA_INLINE uint32_t machine_Machine_read_uint32(machine_Machine_ptr self, uint64_t addr);
+static NELUA_INLINE void*    machine_Machine_getptr(machine_Machine_ptr self, uint64_t addr);
+static NELUA_INLINE void machine_Machine_write_uint8(machine_Machine_ptr self, uint64_t addr, uint8_t val);
+static NELUA_INLINE void machine_Machine_write_uint16(machine_Machine_ptr self, uint64_t addr, uint16_t val);
+static NELUA_INLINE void machine_Machine_write_uint32(machine_Machine_ptr self, uint64_t addr, uint32_t val);
+static NELUA_INLINE void machine_Machine_write_uint64(machine_Machine_ptr self, uint64_t addr, uint64_t val);
+static uint64_t          machine_Machine_handle_syscall(machine_Machine_ptr self, uint64_t code);
+static NELUA_INLINE void machine_Machine_execute(machine_Machine_ptr self, uint32_t inst);
+static NELUA_INLINE int64_t  machine_Machine_shl_nlint64(int64_t a, int64_t b);
+static NELUA_INLINE int64_t  machine_Machine_shr_nlint64(int64_t a, int64_t b);
+static NELUA_INLINE int64_t  machine_Machine_asr_nlint64(int64_t a, int64_t b);
+static NELUA_INLINE __int128 machine_Machine_shr_nlint128(__int128 a, __int128 b);
+static NELUA_NOINLINE void   machine_Machine_run(machine_Machine_ptr self);
 
 // Reference: https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc
 typedef enum
 {
     reg_zero, // always zero
-    reg_ra, // return address
-    reg_sp, // stack pointer
-    reg_gp, // global pointer
-    reg_tp, // thread pointer
+    reg_ra,   // return address
+    reg_sp,   // stack pointer
+    reg_gp,   // global pointer
+    reg_tp,   // thread pointer
     reg_t0,
     reg_t1,
     reg_t2,
@@ -169,484 +177,510 @@ __declspec(align(4096)) uint8_t g_code[0x10000];
 #pragma section(".vmstack", read, write)
 __declspec(align(4096)) uint8_t g_stack[0x10000];
 
-#define reg_read(idx) (int64_t)self->regs[idx]
+#define reg_read(idx)         (int64_t) self->regs[idx]
 #define reg_write(idx, value) self->regs[idx] = value
 
 /* ------------------------------ DEFINITIONS ------------------------------- */
-#define panic(...) do { printf(__VA_ARGS__); __debugbreak(); } while(0)
-void machine_Machine_loadfile( machine_Machine_ptr self, const char* filename )
+#define panic(...)           \
+    do                       \
+    {                        \
+        printf(__VA_ARGS__); \
+        __debugbreak();      \
+    } while (0)
+void machine_Machine_loadfile(machine_Machine_ptr self, const char* filename)
 {
-    FILE* fp = fopen( filename, "rb" );
-    if( ( !( fp != NULL ) ) )
+    FILE* fp = fopen(filename, "rb");
+    if ((!(fp != NULL)))
     {
         puts("failed to open file");
     }
-    fseek( fp, 0, SEEK_END );
-    long size = ftell( fp );
-    fseek( fp, 0, SEEK_SET );
+    fseek(fp, 0, SEEK_END);
+    long size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
     if (size > sizeof(g_code))
     {
         puts("loaded code too big!");
         exit(EXIT_FAILURE);
     }
     fread(g_code, size, 1, fp);
-    fclose( fp );
+    fclose(fp);
     reg_write(reg_sp, (uint64_t)&g_stack[sizeof(g_stack) - 0x10]);
     self->pc = (int64_t)g_code;
 }
-uint32_t machine_Machine_fetch( machine_Machine_ptr self )
+uint32_t machine_Machine_fetch(machine_Machine_ptr self)
 {
     uint32_t data;
     memcpy(&data, (const void*)self->pc, sizeof(data));
     return data;
 }
-int8_t machine_Machine_read_int8( machine_Machine_ptr self, uint64_t addr )
+int8_t machine_Machine_read_int8(machine_Machine_ptr self, uint64_t addr)
 {
     int8_t data;
     memcpy(&data, (const void*)addr, sizeof(data));
     return data;
 }
-int16_t machine_Machine_read_int16( machine_Machine_ptr self, uint64_t addr )
+int16_t machine_Machine_read_int16(machine_Machine_ptr self, uint64_t addr)
 {
     int16_t data;
     memcpy(&data, (const void*)addr, sizeof(data));
     return data;
 }
-int32_t machine_Machine_read_int32( machine_Machine_ptr self, uint64_t addr )
+int32_t machine_Machine_read_int32(machine_Machine_ptr self, uint64_t addr)
 {
     int32_t data;
     memcpy(&data, (const void*)addr, sizeof(data));
     return data;
 }
-int64_t machine_Machine_read_int64( machine_Machine_ptr self, uint64_t addr )
+int64_t machine_Machine_read_int64(machine_Machine_ptr self, uint64_t addr)
 {
     int64_t data;
     memcpy(&data, (const void*)addr, sizeof(data));
     return data;
 }
-uint8_t machine_Machine_read_uint8( machine_Machine_ptr self, uint64_t addr )
+uint8_t machine_Machine_read_uint8(machine_Machine_ptr self, uint64_t addr)
 {
     uint8_t data;
     memcpy(&data, (const void*)addr, sizeof(data));
     return data;
 }
-uint16_t machine_Machine_read_uint16( machine_Machine_ptr self, uint64_t addr )
+uint16_t machine_Machine_read_uint16(machine_Machine_ptr self, uint64_t addr)
 {
     uint16_t data;
     memcpy(&data, (const void*)addr, sizeof(data));
     return data;
 }
-uint32_t machine_Machine_read_uint32( machine_Machine_ptr self, uint64_t addr )
+uint32_t machine_Machine_read_uint32(machine_Machine_ptr self, uint64_t addr)
 {
     uint32_t data;
     memcpy(&data, (const void*)addr, sizeof(data));
     return data;
 }
-void* machine_Machine_getptr( machine_Machine_ptr self, uint64_t addr )
+void* machine_Machine_getptr(machine_Machine_ptr self, uint64_t addr)
 {
     return (void*)addr;
 }
-void machine_Machine_write_uint8( machine_Machine_ptr self, uint64_t addr, uint8_t val )
+void machine_Machine_write_uint8(machine_Machine_ptr self, uint64_t addr, uint8_t val)
 {
     memcpy((void*)addr, &val, sizeof(val));
 }
-void machine_Machine_write_uint16( machine_Machine_ptr self, uint64_t addr, uint16_t val )
+void machine_Machine_write_uint16(machine_Machine_ptr self, uint64_t addr, uint16_t val)
 {
     memcpy((void*)addr, &val, sizeof(val));
 }
-void machine_Machine_write_uint32( machine_Machine_ptr self, uint64_t addr, uint32_t val )
+void machine_Machine_write_uint32(machine_Machine_ptr self, uint64_t addr, uint32_t val)
 {
     memcpy((void*)addr, &val, sizeof(val));
 }
-void machine_Machine_write_uint64( machine_Machine_ptr self, uint64_t addr, uint64_t val )
+void machine_Machine_write_uint64(machine_Machine_ptr self, uint64_t addr, uint64_t val)
 {
     memcpy((void*)addr, &val, sizeof(val));
 }
 
-NELUA_INLINE uint32_t syscall_0_stub( uint32_t id )
+NELUA_INLINE uint32_t syscall_0_stub(uint32_t id)
 {
-    register void* a1 asm( "r10" );
-    void* a2;
-    register void* a3 asm( "r8" );
-    register void* a4 asm( "r9" );
+    register void* a1 asm("r10");
+    void*          a2;
+    register void* a3 asm("r8");
+    register void* a4 asm("r9");
 
-    void* unused_output;
-    register void* unused_output2 asm( "r11" );
+    void*          unused_output;
+    register void* unused_output2 asm("r11");
 
     uint32_t status;
-    asm volatile( "syscall\n"
-                  : "=a"( status ), "=r"( a1 ), "=d"( a2 ), "=r"( a3 ), "=r"( a4 ), "=c"( unused_output ), "=r"( unused_output2 )
-                  : "a"( id )
-                  : "memory", "cc" );
+    asm volatile("syscall\n"
+                 : "=a"(status), "=r"(a1), "=d"(a2), "=r"(a3), "=r"(a4), "=c"(unused_output), "=r"(unused_output2)
+                 : "a"(id)
+                 : "memory", "cc");
     return status;
 }
 
-NELUA_INLINE uint32_t syscall_1_stub( uint32_t id, uint64_t _1 )
+NELUA_INLINE uint32_t syscall_1_stub(uint32_t id, uint64_t _1)
 {
-    register uint64_t a1 asm( "r10" ) = _1;
-    void* a2;
-    register void* a3 asm( "r8" );
-    register void* a4 asm( "r9" );
+    register uint64_t a1 asm("r10") = _1;
+    void*             a2;
+    register void*    a3 asm("r8");
+    register void*    a4 asm("r9");
 
-    void* unused_output;
-    register void* unused_output2 asm( "r11" );
+    void*          unused_output;
+    register void* unused_output2 asm("r11");
 
     uint32_t status;
-    asm volatile( "syscall\n"
-                  : "=a"( status ), "=r"( a1 ), "=d"( a2 ), "=r"( a3 ), "=r"( a4 ), "=c"( unused_output ), "=r"( unused_output2 )
-                  : "a"( id ), "r"( a1 )
-                  : "memory", "cc" );
+    asm volatile("syscall\n"
+                 : "=a"(status), "=r"(a1), "=d"(a2), "=r"(a3), "=r"(a4), "=c"(unused_output), "=r"(unused_output2)
+                 : "a"(id), "r"(a1)
+                 : "memory", "cc");
     return status;
 }
 
-NELUA_INLINE uint32_t syscall_2_stub( uint32_t id, uint64_t _1, uint64_t _2 )
+NELUA_INLINE uint32_t syscall_2_stub(uint32_t id, uint64_t _1, uint64_t _2)
 {
-    register uint64_t a1 asm( "r10" ) = _1;
-    register void* a3 asm( "r8" );
-    register void* a4 asm( "r9" );
+    register uint64_t a1 asm("r10") = _1;
+    register void*    a3 asm("r8");
+    register void*    a4 asm("r9");
 
-    void* unused_output;
-    register void* unused_output2 asm( "r11" );
+    void*          unused_output;
+    register void* unused_output2 asm("r11");
 
     uint32_t status;
-    asm volatile( "syscall\n"
-                  : "=a"( status ), "=r"( a1 ), "=d"( _2 ), "=r"( a3 ), "=r"( a4 ), "=c"( unused_output ), "=r"( unused_output2 )
-                  : "a"( id ), "r"( a1 ), "d"( _2 )
-                  : "memory", "cc" );
+    asm volatile("syscall\n"
+                 : "=a"(status), "=r"(a1), "=d"(_2), "=r"(a3), "=r"(a4), "=c"(unused_output), "=r"(unused_output2)
+                 : "a"(id), "r"(a1), "d"(_2)
+                 : "memory", "cc");
     return status;
 }
 
-NELUA_INLINE uint32_t syscall_3_stub( uint32_t id, uint64_t _1, uint64_t _2, uint64_t _3 )
+NELUA_INLINE uint32_t syscall_3_stub(uint32_t id, uint64_t _1, uint64_t _2, uint64_t _3)
 {
-    register uint64_t a1 asm( "r10" ) = _1;
-    register uint64_t a3 asm( "r8" ) = _3;
-    register void* a4 asm( "r9" );
+    register uint64_t a1 asm("r10") = _1;
+    register uint64_t a3 asm("r8")  = _3;
+    register void*    a4 asm("r9");
 
-    void* unused_output;
-    register void* unused_output2 asm( "r11" );
+    void*          unused_output;
+    register void* unused_output2 asm("r11");
 
     uint32_t status;
-    asm volatile( "syscall\n"
-                  : "=a"( status ), "=r"( a1 ), "=d"( _2 ), "=r"( a3 ), "=r"( a4 ), "=c"( unused_output ), "=r"( unused_output2 )
-                  : "a"( id ), "r"( a1 ), "d"( _2 ), "r"( a3 )
-                  : "memory", "cc" );
+    asm volatile("syscall\n"
+                 : "=a"(status), "=r"(a1), "=d"(_2), "=r"(a3), "=r"(a4), "=c"(unused_output), "=r"(unused_output2)
+                 : "a"(id), "r"(a1), "d"(_2), "r"(a3)
+                 : "memory", "cc");
     return status;
 }
 
-NELUA_INLINE uint32_t syscall_4_stub( uint32_t id, uint64_t _1, uint64_t _2, uint64_t _3, uint64_t _4 )
+NELUA_INLINE uint32_t syscall_4_stub(uint32_t id, uint64_t _1, uint64_t _2, uint64_t _3, uint64_t _4)
 {
-    register uint64_t a1 asm( "r10" ) = _1;
-    register uint64_t a3 asm( "r8" ) = _3;
-    register uint64_t a4 asm( "r9" ) = _4;
+    register uint64_t a1 asm("r10") = _1;
+    register uint64_t a3 asm("r8")  = _3;
+    register uint64_t a4 asm("r9")  = _4;
 
-    void* unused_output;
-    register void* unused_output2 asm( "r11" );
+    void*          unused_output;
+    register void* unused_output2 asm("r11");
 
     uint32_t status;
-    asm volatile( "syscall\n"
-                  : "=a"( status ), "=r"( a1 ), "=d"( _2 ), "=r"( a3 ), "=r"( a4 ), "=c"( unused_output ), "=r"( unused_output2 )
-                  : "a"( id ), "r"( a1 ), "d"( _2 ), "r"( a3 ), "r"( a4 )
-                  : "memory", "cc" );
+    asm volatile("syscall\n"
+                 : "=a"(status), "=r"(a1), "=d"(_2), "=r"(a3), "=r"(a4), "=c"(unused_output), "=r"(unused_output2)
+                 : "a"(id), "r"(a1), "d"(_2), "r"(a3), "r"(a4)
+                 : "memory", "cc");
     return status;
 }
 
-NELUA_INLINE uint32_t syscall_5_stub( uint32_t id, uint64_t _1, uint64_t _2, uint64_t _3, uint64_t _4, uint64_t _5 )
+NELUA_INLINE uint32_t syscall_5_stub(uint32_t id, uint64_t _1, uint64_t _2, uint64_t _3, uint64_t _4, uint64_t _5)
 {
-    register uint64_t a1 asm( "r10" ) = _1;
-    register uint64_t a3 asm( "r8" ) = _3;
-    register uint64_t a4 asm( "r9" ) = _4;
+    register uint64_t a1 asm("r10") = _1;
+    register uint64_t a3 asm("r8")  = _3;
+    register uint64_t a4 asm("r9")  = _4;
 
-    void* unused_output;
-    register void* unused_output2 asm( "r11" );
+    void*          unused_output;
+    register void* unused_output2 asm("r11");
 
     uint32_t status;
-    asm volatile( "sub $48, %%rsp\n"
-                  "movq %[a5], 40(%%rsp)\n"
-                  "syscall\n"
-                  "add $48, %%rsp"
-                  : "=a"( status ), "=r"( a1 ), "=d"( _2 ), "=r"( a3 ), "=r"( a4 ), "=c"( unused_output ), "=r"( unused_output2 )
-                  : "a"( id ), "r"( a1 ), "d"( _2 ), "r"( a3 ), "r"( a4 ), [ a5 ] "re"( ( void* )( _5 ) )
-                  : "cc" );
+    asm volatile("sub $48, %%rsp\n"
+                 "movq %[a5], 40(%%rsp)\n"
+                 "syscall\n"
+                 "add $48, %%rsp"
+                 : "=a"(status), "=r"(a1), "=d"(_2), "=r"(a3), "=r"(a4), "=c"(unused_output), "=r"(unused_output2)
+                 : "a"(id), "r"(a1), "d"(_2), "r"(a3), "r"(a4), [a5] "re"((void*)(_5))
+                 : "cc");
     return status;
 }
 
-NELUA_INLINE uint32_t syscall_6_stub( uint32_t id, uint64_t _1, uint64_t _2, uint64_t _3, uint64_t _4, uint64_t _5, uint64_t _6 )
+NELUA_INLINE uint32_t
+syscall_6_stub(uint32_t id, uint64_t _1, uint64_t _2, uint64_t _3, uint64_t _4, uint64_t _5, uint64_t _6)
 {
-    register uint64_t a1 asm( "r10" ) = _1;
-    register uint64_t a3 asm( "r8" ) = _3;
-    register uint64_t a4 asm( "r9" ) = _4;
+    register uint64_t a1 asm("r10") = _1;
+    register uint64_t a3 asm("r8")  = _3;
+    register uint64_t a4 asm("r9")  = _4;
 
-    void* unused_output;
-    register uint64_t unused_output2 asm( "r11" );
+    void*             unused_output;
+    register uint64_t unused_output2 asm("r11");
+
+    uint32_t status;
+    asm volatile("sub $64, %%rsp\n"
+                 "movq %[a5], 40(%%rsp)\n"
+                 "movq %[a6], 48(%%rsp)\n"
+                 "syscall\n"
+                 "add $64, %%rsp"
+                 : "=a"(status), "=r"(a1), "=d"(_2), "=r"(a3), "=r"(a4), "=c"(unused_output), "=r"(unused_output2)
+                 : "a"(id), "r"(a1), "d"(_2), "r"(a3), "r"(a4), [a5] "re"(_5), [a6] "re"(_6)
+                 : "memory", "cc");
+    return status;
+}
+
+NELUA_INLINE uint32_t syscall_7_stub(
+    uint32_t id, uint64_t _1, uint64_t _2, uint64_t _3, uint64_t _4, uint64_t _5, uint64_t _6, uint64_t _7
+)
+{
+    register uint64_t a1 asm("r10") = _1;
+    register uint64_t a3 asm("r8")  = _3;
+    register uint64_t a4 asm("r9")  = _4;
+
+    void*             unused_output;
+    register uint64_t unused_output2 asm("r11");
+
+    uint32_t status;
+    asm volatile("sub $64, %%rsp\n"
+                 "movq %[a5], 40(%%rsp)\n"
+                 "movq %[a6], 48(%%rsp)\n"
+                 "movq %[a7], 56(%%rsp)\n"
+                 "syscall\n"
+                 "add $64, %%rsp"
+                 : "=a"(status), "=r"(a1), "=d"(_2), "=r"(a3), "=r"(a4), "=c"(unused_output), "=r"(unused_output2)
+                 : "a"(id), "r"(a1), "d"(_2), "r"(a3), "r"(a4), [a5] "re"(_5), [a6] "re"(_6), [a7] "re"(_7)
+                 : "memory", "cc");
+    return status;
+}
+
+NELUA_INLINE uint32_t syscall_8_stub(
+    uint32_t id, uint64_t _1, uint64_t _2, uint64_t _3, uint64_t _4, uint64_t _5, uint64_t _6, uint64_t _7, uint64_t _8
+)
+{
+    register uint64_t a1 asm("r10") = _1;
+    register uint64_t a3 asm("r8")  = _3;
+    register uint64_t a4 asm("r9")  = _4;
+
+    void*             unused_output;
+    register uint64_t unused_output2 asm("r11");
 
     uint32_t status;
     asm volatile(
-        "sub $64, %%rsp\n"
+        "sub $80, %%rsp\n"
         "movq %[a5], 40(%%rsp)\n"
         "movq %[a6], 48(%%rsp)\n"
+        "movq %[a7], 56(%%rsp)\n"
+        "movq %[a8], 64(%%rsp)\n"
         "syscall\n"
-        "add $64, %%rsp"
-        : "=a"( status ), "=r"( a1 ), "=d"( _2 ), "=r"( a3 ), "=r"( a4 ), "=c"( unused_output ), "=r"( unused_output2 )
-        : "a"( id ), "r"( a1 ), "d"( _2 ), "r"( a3 ), "r"( a4 ), [ a5 ] "re"( _5 ), [ a6 ] "re"( _6 )
+        "add $80, %%rsp"
+        : "=a"(status), "=r"(a1), "=d"(_2), "=r"(a3), "=r"(a4), "=c"(unused_output), "=r"(unused_output2)
+        : "a"(id), "r"(a1), "d"(_2), "r"(a3), "r"(a4), [a5] "re"(_5), [a6] "re"(_6), [a7] "re"(_7), [a8] "re"(_8)
         : "memory", "cc"
-        );
+    );
     return status;
 }
 
-NELUA_INLINE uint32_t syscall_7_stub( uint32_t id, uint64_t _1, uint64_t _2, uint64_t _3, uint64_t _4, uint64_t _5, uint64_t _6, uint64_t _7 )
+NELUA_INLINE uint32_t syscall_9_stub(
+    uint32_t id, uint64_t _1, uint64_t _2, uint64_t _3, uint64_t _4, uint64_t _5, uint64_t _6, uint64_t _7, uint64_t _8, uint64_t _9
+)
 {
-    register uint64_t a1 asm( "r10" ) = _1;
-    register uint64_t a3 asm( "r8" ) = _3;
-    register uint64_t a4 asm( "r9" ) = _4;
+    register uint64_t a1 asm("r10") = _1;
+    register uint64_t a3 asm("r8")  = _3;
+    register uint64_t a4 asm("r9")  = _4;
 
-    void* unused_output;
-    register uint64_t unused_output2 asm( "r11" );
+    void*             unused_output;
+    register uint64_t unused_output2 asm("r11");
 
     uint32_t status;
-    asm volatile( "sub $64, %%rsp\n"
-                  "movq %[a5], 40(%%rsp)\n"
-                  "movq %[a6], 48(%%rsp)\n"
-                  "movq %[a7], 56(%%rsp)\n"
-                  "syscall\n"
-                  "add $64, %%rsp"
-                  : "=a"( status ), "=r"( a1 ), "=d"( _2 ), "=r"( a3 ), "=r"( a4 ), "=c"( unused_output ), "=r"( unused_output2 )
-                  : "a"( id ),
-                  "r"( a1 ),
-                  "d"( _2 ),
-                  "r"( a3 ),
-                  "r"( a4 ),
-                  [ a5 ] "re"( _5 ),
-                  [ a6 ] "re"( _6 ),
-                  [ a7 ] "re"( _7 )
-                  : "memory", "cc" );
+    asm volatile(
+        "sub $80, %%rsp\n"
+        "movq %[a5], 40(%%rsp)\n"
+        "movq %[a6], 48(%%rsp)\n"
+        "movq %[a7], 56(%%rsp)\n"
+        "movq %[a8], 64(%%rsp)\n"
+        "movq %[a9], 72(%%rsp)\n"
+        "syscall\n"
+        "add $80, %%rsp"
+        : "=a"(status), "=r"(a1), "=d"(_2), "=r"(a3), "=r"(a4), "=c"(unused_output), "=r"(unused_output2)
+        : "a"(id), "r"(a1), "d"(_2), "r"(a3), "r"(a4), [a5] "re"(_5), [a6] "re"(_6), [a7] "re"(_7), [a8] "re"(_8), [a9] "re"(_9)
+        : "memory", "cc"
+    );
     return status;
 }
 
-NELUA_INLINE uint32_t syscall_8_stub( uint32_t id, uint64_t _1, uint64_t _2, uint64_t _3, uint64_t _4, uint64_t _5, uint64_t _6, uint64_t _7, uint64_t _8 )
+NELUA_INLINE uint32_t syscall_10_stub(
+    uint32_t id,
+    uint64_t _1,
+    uint64_t _2,
+    uint64_t _3,
+    uint64_t _4,
+    uint64_t _5,
+    uint64_t _6,
+    uint64_t _7,
+    uint64_t _8,
+    uint64_t _9,
+    uint64_t _10
+)
 {
-    register uint64_t a1 asm( "r10" ) = _1;
-    register uint64_t a3 asm( "r8" ) = _3;
-    register uint64_t a4 asm( "r9" ) = _4;
+    register uint64_t a1 asm("r10") = _1;
+    register uint64_t a3 asm("r8")  = _3;
+    register uint64_t a4 asm("r9")  = _4;
 
-    void* unused_output;
-    register uint64_t unused_output2 asm( "r11" );
+    void*             unused_output;
+    register uint64_t unused_output2 asm("r11");
 
     uint32_t status;
-    asm volatile( "sub $80, %%rsp\n"
-                  "movq %[a5], 40(%%rsp)\n"
-                  "movq %[a6], 48(%%rsp)\n"
-                  "movq %[a7], 56(%%rsp)\n"
-                  "movq %[a8], 64(%%rsp)\n"
-                  "syscall\n"
-                  "add $80, %%rsp"
-                  : "=a"( status ), "=r"( a1 ), "=d"( _2 ), "=r"( a3 ), "=r"( a4 ), "=c"( unused_output ), "=r"( unused_output2 )
-                  : "a"( id ),
-                  "r"( a1 ),
-                  "d"( _2 ),
-                  "r"( a3 ),
-                  "r"( a4 ),
-                  [ a5 ] "re"( _5 ),
-                  [ a6 ] "re"( _6 ),
-                  [ a7 ] "re"( _7 ),
-                  [ a8 ] "re"( _8 )
-                  : "memory", "cc" );
+    asm volatile(
+        "sub $96, %%rsp\n"
+        "movq %[a5], 40(%%rsp)\n"
+        "movq %[a6], 48(%%rsp)\n"
+        "movq %[a7], 56(%%rsp)\n"
+        "movq %[a8], 64(%%rsp)\n"
+        "movq %[a9], 72(%%rsp)\n"
+        "movq %[a10], 80(%%rsp)\n"
+        "syscall\n"
+        "add $96, %%rsp"
+        : "=a"(status), "=r"(a1), "=d"(_2), "=r"(a3), "=r"(a4), "=c"(unused_output), "=r"(unused_output2)
+        : "a"(id), "r"(a1), "d"(_2), "r"(a3), "r"(a4), [a5] "re"(_5), [a6] "re"(_6), [a7] "re"(_7), [a8] "re"(_8), [a9] "re"(_9), [a10] "re"(_10)
+        : "memory", "cc"
+    );
     return status;
 }
 
-NELUA_INLINE uint32_t syscall_9_stub( uint32_t id, uint64_t _1, uint64_t _2, uint64_t _3, uint64_t _4, uint64_t _5, uint64_t _6, uint64_t _7, uint64_t _8, uint64_t _9 )
+NELUA_INLINE uint32_t syscall_11_stub(
+    uint32_t id,
+    uint64_t _1,
+    uint64_t _2,
+    uint64_t _3,
+    uint64_t _4,
+    uint64_t _5,
+    uint64_t _6,
+    uint64_t _7,
+    uint64_t _8,
+    uint64_t _9,
+    uint64_t _10,
+    uint64_t _11
+)
 {
-    register uint64_t a1 asm( "r10" ) = _1;
-    register uint64_t a3 asm( "r8" ) = _3;
-    register uint64_t a4 asm( "r9" ) = _4;
+    register uint64_t a1 asm("r10") = _1;
+    register uint64_t a3 asm("r8")  = _3;
+    register uint64_t a4 asm("r9")  = _4;
 
-    void* unused_output;
-    register uint64_t unused_output2 asm( "r11" );
+    void*             unused_output;
+    register uint64_t unused_output2 asm("r11");
 
     uint32_t status;
-    asm volatile( "sub $80, %%rsp\n"
-                  "movq %[a5], 40(%%rsp)\n"
-                  "movq %[a6], 48(%%rsp)\n"
-                  "movq %[a7], 56(%%rsp)\n"
-                  "movq %[a8], 64(%%rsp)\n"
-                  "movq %[a9], 72(%%rsp)\n"
-                  "syscall\n"
-                  "add $80, %%rsp"
-                  : "=a"( status ), "=r"( a1 ), "=d"( _2 ), "=r"( a3 ), "=r"( a4 ), "=c"( unused_output ), "=r"( unused_output2 )
-                  : "a"( id ),
-                  "r"( a1 ),
-                  "d"( _2 ),
-                  "r"( a3 ),
-                  "r"( a4 ),
-                  [ a5 ] "re"( _5 ),
-                  [ a6 ] "re"( _6 ),
-                  [ a7 ] "re"( _7 ),
-                  [ a8 ] "re"( _8 ),
-                  [ a9 ] "re"( _9 )
-                  : "memory", "cc" );
+    asm volatile(
+        "sub $96, %%rsp\n"
+        "movq %[a5], 40(%%rsp)\n"
+        "movq %[a6], 48(%%rsp)\n"
+        "movq %[a7], 56(%%rsp)\n"
+        "movq %[a8], 64(%%rsp)\n"
+        "movq %[a9], 72(%%rsp)\n"
+        "movq %[a10], 80(%%rsp)\n"
+        "movq %[a11], 88(%%rsp)\n"
+        "syscall\n"
+        "add $96, %%rsp"
+        : "=a"(status), "=r"(a1), "=d"(_2), "=r"(a3), "=r"(a4), "=c"(unused_output), "=r"(unused_output2)
+        : "a"(id), "r"(a1), "d"(_2), "r"(a3), "r"(a4), [a5] "re"(_5), [a6] "re"(_6), [a7] "re"(_7), [a8] "re"(_8), [a9] "re"(_9), [a10] "re"(_10), [a11] "re"(_11)
+        : "memory", "cc"
+    );
     return status;
 }
 
-NELUA_INLINE uint32_t syscall_10_stub( uint32_t id, uint64_t _1, uint64_t _2, uint64_t _3, uint64_t _4, uint64_t _5, uint64_t _6, uint64_t _7, uint64_t _8, uint64_t _9, uint64_t _10 )
+NELUA_INLINE uint32_t syscall_12_stub(
+    uint32_t id,
+    uint64_t _1,
+    uint64_t _2,
+    uint64_t _3,
+    uint64_t _4,
+    uint64_t _5,
+    uint64_t _6,
+    uint64_t _7,
+    uint64_t _8,
+    uint64_t _9,
+    uint64_t _10,
+    uint64_t _11,
+    uint64_t _12
+)
 {
-    register uint64_t a1 asm( "r10" ) = _1;
-    register uint64_t a3 asm( "r8" ) = _3;
-    register uint64_t a4 asm( "r9" ) = _4;
+    register uint64_t a1 asm("r10") = _1;
+    register uint64_t a3 asm("r8")  = _3;
+    register uint64_t a4 asm("r9")  = _4;
 
-    void* unused_output;
-    register uint64_t unused_output2 asm( "r11" );
+    void*             unused_output;
+    register uint64_t unused_output2 asm("r11");
 
     uint32_t status;
-    asm volatile( "sub $96, %%rsp\n"
-                  "movq %[a5], 40(%%rsp)\n"
-                  "movq %[a6], 48(%%rsp)\n"
-                  "movq %[a7], 56(%%rsp)\n"
-                  "movq %[a8], 64(%%rsp)\n"
-                  "movq %[a9], 72(%%rsp)\n"
-                  "movq %[a10], 80(%%rsp)\n"
-                  "syscall\n"
-                  "add $96, %%rsp"
-                  : "=a"( status ), "=r"( a1 ), "=d"( _2 ), "=r"( a3 ), "=r"( a4 ), "=c"( unused_output ), "=r"( unused_output2 )
-                  : "a"( id ),
-                  "r"( a1 ),
-                  "d"( _2 ),
-                  "r"( a3 ),
-                  "r"( a4 ),
-                  [ a5 ] "re"( _5 ),
-                  [ a6 ] "re"( _6 ),
-                  [ a7 ] "re"( _7 ),
-                  [ a8 ] "re"( _8 ),
-                  [ a9 ] "re"( _9 ),
-                  [ a10 ] "re"( _10 )
-                  : "memory", "cc" );
+    asm volatile("sub $112, %%rsp\n"
+                 "movq %[a5], 40(%%rsp)\n"
+                 "movq %[a6], 48(%%rsp)\n"
+                 "movq %[a7], 56(%%rsp)\n"
+                 "movq %[a8], 64(%%rsp)\n"
+                 "movq %[a9], 72(%%rsp)\n"
+                 "movq %[a10], 80(%%rsp)\n"
+                 "movq %[a11], 88(%%rsp)\n"
+                 "movq %[a12], 96(%%rsp)\n"
+                 "syscall\n"
+                 "add $112, %%rsp"
+                 : "=a"(status), "=r"(a1), "=d"(_2), "=r"(a3), "=r"(a4), "=c"(unused_output), "=r"(unused_output2)
+                 : "a"(id),
+                   "r"(a1),
+                   "d"(_2),
+                   "r"(a3),
+                   "r"(a4),
+                   [a5] "re"(_5),
+                   [a6] "re"(_6),
+                   [a7] "re"(_7),
+                   [a8] "re"(_8),
+                   [a9] "re"(_9),
+                   [a10] "re"(_10),
+                   [a11] "re"(_11),
+                   [a12] "re"(_12)
+                 : "memory", "cc");
     return status;
 }
 
-NELUA_INLINE uint32_t syscall_11_stub( uint32_t id, uint64_t _1, uint64_t _2, uint64_t _3, uint64_t _4, uint64_t _5, uint64_t _6, uint64_t _7, uint64_t _8, uint64_t _9, uint64_t _10, uint64_t _11 )
+NELUA_INLINE uint32_t syscall_13_stub(
+    uint32_t id,
+    uint64_t _1,
+    uint64_t _2,
+    uint64_t _3,
+    uint64_t _4,
+    uint64_t _5,
+    uint64_t _6,
+    uint64_t _7,
+    uint64_t _8,
+    uint64_t _9,
+    uint64_t _10,
+    uint64_t _11,
+    uint64_t _12,
+    uint64_t _13
+)
 {
-    register uint64_t a1 asm( "r10" ) = _1;
-    register uint64_t a3 asm( "r8" ) = _3;
-    register uint64_t a4 asm( "r9" ) = _4;
+    register uint64_t a1 asm("r10") = _1;
+    register uint64_t a3 asm("r8")  = _3;
+    register uint64_t a4 asm("r9")  = _4;
 
-    void* unused_output;
-    register uint64_t unused_output2 asm( "r11" );
+    void*             unused_output;
+    register uint64_t unused_output2 asm("r11");
 
     uint32_t status;
-    asm volatile( "sub $96, %%rsp\n"
-                  "movq %[a5], 40(%%rsp)\n"
-                  "movq %[a6], 48(%%rsp)\n"
-                  "movq %[a7], 56(%%rsp)\n"
-                  "movq %[a8], 64(%%rsp)\n"
-                  "movq %[a9], 72(%%rsp)\n"
-                  "movq %[a10], 80(%%rsp)\n"
-                  "movq %[a11], 88(%%rsp)\n"
-                  "syscall\n"
-                  "add $96, %%rsp"
-                  : "=a"( status ), "=r"( a1 ), "=d"( _2 ), "=r"( a3 ), "=r"( a4 ), "=c"( unused_output ), "=r"( unused_output2 )
-                  : "a"( id ),
-                  "r"( a1 ),
-                  "d"( _2 ),
-                  "r"( a3 ),
-                  "r"( a4 ),
-                  [ a5 ] "re"( _5 ),
-                  [ a6 ] "re"( _6 ),
-                  [ a7 ] "re"( _7 ),
-                  [ a8 ] "re"( _8 ),
-                  [ a9 ] "re"( _9 ),
-                  [ a10 ] "re"( _10 ),
-                  [ a11 ] "re"( _11 )
-                  : "memory", "cc" );
+    asm volatile("sub $112, %%rsp\n"
+                 "movq %[a5], 40(%%rsp)\n"
+                 "movq %[a6], 48(%%rsp)\n"
+                 "movq %[a7], 56(%%rsp)\n"
+                 "movq %[a8], 64(%%rsp)\n"
+                 "movq %[a9], 72(%%rsp)\n"
+                 "movq %[a10], 80(%%rsp)\n"
+                 "movq %[a11], 88(%%rsp)\n"
+                 "movq %[a12], 96(%%rsp)\n"
+                 "movq %[a13], 104(%%rsp)\n"
+                 "syscall\n"
+                 "add $112, %%rsp"
+                 : "=a"(status), "=r"(a1), "=d"(_2), "=r"(a3), "=r"(a4), "=c"(unused_output), "=r"(unused_output2)
+                 : "a"(id),
+                   "r"(a1),
+                   "d"(_2),
+                   "r"(a3),
+                   "r"(a4),
+                   [a5] "re"(_5),
+                   [a6] "re"(_6),
+                   [a7] "re"(_7),
+                   [a8] "re"(_8),
+                   [a9] "re"(_9),
+                   [a10] "re"(_10),
+                   [a11] "re"(_11),
+                   [a12] "re"(_12),
+                   [a13] "re"(_13)
+                 : "memory", "cc");
     return status;
 }
 
-NELUA_INLINE uint32_t syscall_12_stub( uint32_t id, uint64_t _1, uint64_t _2, uint64_t _3, uint64_t _4, uint64_t _5, uint64_t _6, uint64_t _7, uint64_t _8, uint64_t _9, uint64_t _10, uint64_t _11, uint64_t _12 )
-{
-    register uint64_t a1 asm( "r10" ) = _1;
-    register uint64_t a3 asm( "r8" ) = _3;
-    register uint64_t a4 asm( "r9" ) = _4;
-
-    void* unused_output;
-    register uint64_t unused_output2 asm( "r11" );
-
-    uint32_t status;
-    asm volatile( "sub $112, %%rsp\n"
-                  "movq %[a5], 40(%%rsp)\n"
-                  "movq %[a6], 48(%%rsp)\n"
-                  "movq %[a7], 56(%%rsp)\n"
-                  "movq %[a8], 64(%%rsp)\n"
-                  "movq %[a9], 72(%%rsp)\n"
-                  "movq %[a10], 80(%%rsp)\n"
-                  "movq %[a11], 88(%%rsp)\n"
-                  "movq %[a12], 96(%%rsp)\n"
-                  "syscall\n"
-                  "add $112, %%rsp"
-                  : "=a"( status ), "=r"( a1 ), "=d"( _2 ), "=r"( a3 ), "=r"( a4 ), "=c"( unused_output ), "=r"( unused_output2 )
-                  : "a"( id ),
-                  "r"( a1 ),
-                  "d"( _2 ),
-                  "r"( a3 ),
-                  "r"( a4 ),
-                  [ a5 ] "re"( _5 ),
-                  [ a6 ] "re"( _6 ),
-                  [ a7 ] "re"( _7 ),
-                  [ a8 ] "re"( _8 ),
-                  [ a9 ] "re"( _9 ),
-                  [ a10 ] "re"( _10 ),
-                  [ a11 ] "re"( _11 ),
-                  [ a12 ] "re"( _12 )
-                  : "memory", "cc" );
-    return status;
-}
-
-NELUA_INLINE uint32_t syscall_13_stub( uint32_t id, uint64_t _1, uint64_t _2, uint64_t _3, uint64_t _4, uint64_t _5, uint64_t _6, uint64_t _7, uint64_t _8, uint64_t _9, uint64_t _10, uint64_t _11, uint64_t _12, uint64_t _13 )
-{
-    register uint64_t a1 asm( "r10" ) = _1;
-    register uint64_t a3 asm( "r8" ) = _3;
-    register uint64_t a4 asm( "r9" ) = _4;
-
-    void* unused_output;
-    register uint64_t unused_output2 asm( "r11" );
-
-    uint32_t status;
-    asm volatile( "sub $112, %%rsp\n"
-                  "movq %[a5], 40(%%rsp)\n"
-                  "movq %[a6], 48(%%rsp)\n"
-                  "movq %[a7], 56(%%rsp)\n"
-                  "movq %[a8], 64(%%rsp)\n"
-                  "movq %[a9], 72(%%rsp)\n"
-                  "movq %[a10], 80(%%rsp)\n"
-                  "movq %[a11], 88(%%rsp)\n"
-                  "movq %[a12], 96(%%rsp)\n"
-                  "movq %[a13], 104(%%rsp)\n"
-                  "syscall\n"
-                  "add $112, %%rsp"
-                  : "=a"( status ), "=r"( a1 ), "=d"( _2 ), "=r"( a3 ), "=r"( a4 ), "=c"( unused_output ), "=r"( unused_output2 )
-                  : "a"( id ),
-                  "r"( a1 ),
-                  "d"( _2 ),
-                  "r"( a3 ),
-                  "r"( a4 ),
-                  [ a5 ] "re"( _5 ),
-                  [ a6 ] "re"( _6 ),
-                  [ a7 ] "re"( _7 ),
-                  [ a8 ] "re"( _8 ),
-                  [ a9 ] "re"( _9 ),
-                  [ a10 ] "re"( _10 ),
-                  [ a11 ] "re"( _11 ),
-                  [ a12 ] "re"( _12 ),
-                  [ a13 ] "re"( _13 )
-                  : "memory", "cc" );
-    return status;
-}
-
-
-NELUA_INLINE uint64_t machine_Machine_handle_syscall( machine_Machine_ptr self, uint64_t code )
+NELUA_INLINE uint64_t machine_Machine_handle_syscall(machine_Machine_ptr self, uint64_t code)
 {
     trace("syscall %llu\n", code);
-    switch( code )
+    switch (code)
     {
     case 10000:
     {
-        self->running = false;
+        self->running  = false;
         self->exitcode = reg_read(reg_a0);
         break;
     }
@@ -657,33 +691,33 @@ NELUA_INLINE uint64_t machine_Machine_handle_syscall( machine_Machine_ptr self, 
     }
     case 10006:
     {
-        void* src = machine_Machine_getptr( self, reg_read(reg_a0) );
-        void* dest = machine_Machine_getptr( self, reg_read(reg_a1) );
-        void* res = memcpy( dest, src, ( size_t )reg_read(reg_a2) );
-        return ( uint64_t )res;
+        void* src  = machine_Machine_getptr(self, reg_read(reg_a0));
+        void* dest = machine_Machine_getptr(self, reg_read(reg_a1));
+        void* res  = memcpy(dest, src, (size_t)reg_read(reg_a2));
+        return (uint64_t)res;
     }
     case 10007:
     {
-        void* dest = machine_Machine_getptr( self, reg_read(reg_a0) );
-        void* res = memset( dest, ( int )reg_read(reg_a1), ( size_t )reg_read(reg_a2) );
-        return ( uint64_t )res;
+        void* dest = machine_Machine_getptr(self, reg_read(reg_a0));
+        void* res  = memset(dest, (int)reg_read(reg_a1), (size_t)reg_read(reg_a2));
+        return (uint64_t)res;
     }
     case 10008:
     {
-        void* src = machine_Machine_getptr( self, reg_read(reg_a0) );
-        void* dest = machine_Machine_getptr( self, reg_read(reg_a1) );
-        void* res = memmove( dest, src, ( size_t )reg_read(reg_a2) );
-        return ( uint64_t )res;
+        void* src  = machine_Machine_getptr(self, reg_read(reg_a0));
+        void* dest = machine_Machine_getptr(self, reg_read(reg_a1));
+        void* res  = memmove(dest, src, (size_t)reg_read(reg_a2));
+        return (uint64_t)res;
     }
     case 10009:
     {
-        void* src1 = machine_Machine_getptr( self, reg_read(reg_a0) );
-        void* src2 = machine_Machine_getptr( self, reg_read(reg_a1) );
-        return ( uint64_t )memcmp( src1, src2, ( size_t )reg_read(reg_a2) );
+        void* src1 = machine_Machine_getptr(self, reg_read(reg_a0));
+        void* src2 = machine_Machine_getptr(self, reg_read(reg_a1));
+        return (uint64_t)memcmp(src1, src2, (size_t)reg_read(reg_a2));
     }
     case 10101:
     {
-        char* s = ( char* )machine_Machine_getptr( self, reg_read(reg_a0) );
+        char* s = (char*)machine_Machine_getptr(self, reg_read(reg_a0));
         if (s != NULL)
         {
             puts(s);
@@ -697,72 +731,95 @@ NELUA_INLINE uint64_t machine_Machine_handle_syscall( machine_Machine_ptr self, 
     }
     case 20000:
     {
-        uint32_t id = ( uint32_t )reg_read(reg_a0);
-        uint64_t* args = ( uint64_t* )machine_Machine_getptr( self, reg_read(reg_a1) );
-        size_t nargs = ( size_t )reg_read(reg_a2);
-        switch( nargs )
+        uint32_t  id    = (uint32_t)reg_read(reg_a0);
+        uint64_t* args  = (uint64_t*)machine_Machine_getptr(self, reg_read(reg_a1));
+        size_t    nargs = (size_t)reg_read(reg_a2);
+        switch (nargs)
         {
-            case 0:
-            {
-                return ( uint64_t )syscall_0_stub( id );
-            }
-            case 1:
-            {
-                return ( uint64_t )syscall_1_stub( id, args[0] );
-            }
-            case 2:
-            {
-                return ( uint64_t )syscall_2_stub( id, args[0], args[1] );
-            }
-            case 3:
-            {
-                return ( uint64_t )syscall_3_stub( id, args[0], args[1], args[2] );
-            }
-            case 4:
-            {
-                return ( uint64_t )syscall_4_stub( id, args[0], args[1], args[2], args[3] );
-            }
-            case 5:
-            {
-                return ( uint64_t )syscall_5_stub( id, args[0], args[1], args[2], args[3], args[4] );
-            }
-            case 6:
-            {
-                return ( uint64_t )syscall_6_stub( id, args[0], args[1], args[2], args[3], args[4], args[5] );
-            }
-            case 7:
-            {
-                return ( uint64_t )syscall_7_stub( id, args[0], args[1], args[2], args[3], args[4], args[5], args[6] );
-            }
-            case 8:
-            {
-                return ( uint64_t )syscall_8_stub( id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7] );
-            }
-            case 9:
-            {
-                return ( uint64_t )syscall_9_stub( id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8] );
-            }
-            case 10:
-            {
-                return ( uint64_t )syscall_10_stub( id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9] );
-            }
-            case 11:
-            {
-                return ( uint64_t )syscall_11_stub( id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10] );
-            }
-            case 12:
-            {
-                return ( uint64_t )syscall_12_stub( id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11] );
-            }
-            case 13:
-            {
-                return ( uint64_t )syscall_13_stub( id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12] );
-            }
-            default:
-            {
-                panic("too many arguments for windows syscall");
-                break;
-            }
+        case 0:
+        {
+            return (uint64_t)syscall_0_stub(id);
+        }
+        case 1:
+        {
+            return (uint64_t)syscall_1_stub(id, args[0]);
+        }
+        case 2:
+        {
+            return (uint64_t)syscall_2_stub(id, args[0], args[1]);
+        }
+        case 3:
+        {
+            return (uint64_t)syscall_3_stub(id, args[0], args[1], args[2]);
+        }
+        case 4:
+        {
+            return (uint64_t)syscall_4_stub(id, args[0], args[1], args[2], args[3]);
+        }
+        case 5:
+        {
+            return (uint64_t)syscall_5_stub(id, args[0], args[1], args[2], args[3], args[4]);
+        }
+        case 6:
+        {
+            return (uint64_t)syscall_6_stub(id, args[0], args[1], args[2], args[3], args[4], args[5]);
+        }
+        case 7:
+        {
+            return (uint64_t)syscall_7_stub(id, args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
+        }
+        case 8:
+        {
+            return (uint64_t
+            )syscall_8_stub(id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
+        }
+        case 9:
+        {
+            return (uint64_t
+            )syscall_9_stub(id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8]);
+        }
+        case 10:
+        {
+            return (uint64_t)syscall_10_stub(
+                id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9]
+            );
+        }
+        case 11:
+        {
+            return (uint64_t)syscall_11_stub(
+                id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10]
+            );
+        }
+        case 12:
+        {
+            return (uint64_t)syscall_12_stub(
+                id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11]
+            );
+        }
+        case 13:
+        {
+            return (uint64_t)syscall_13_stub(
+                id,
+                args[0],
+                args[1],
+                args[2],
+                args[3],
+                args[4],
+                args[5],
+                args[6],
+                args[7],
+                args[8],
+                args[9],
+                args[10],
+                args[11],
+                args[12]
+            );
+        }
+        default:
+        {
+            panic("too many arguments for windows syscall");
+            break;
+        }
         }
     }
     default:
@@ -773,47 +830,47 @@ NELUA_INLINE uint64_t machine_Machine_handle_syscall( machine_Machine_ptr self, 
     }
     return 0U;
 }
-int64_t machine_Machine_shl_nlint64( int64_t a, int64_t b )
+int64_t machine_Machine_shl_nlint64(int64_t a, int64_t b)
 {
-    if( NELUA_LIKELY( b >= 0 && b < 64 ) )
+    if (NELUA_LIKELY(b >= 0 && b < 64))
     {
-        return ( ( uint64_t )a ) << b;
+        return ((uint64_t)a) << b;
     }
-    else if( NELUA_UNLIKELY( b < 0 && b > -64 ) )
+    else if (NELUA_UNLIKELY(b < 0 && b > -64))
     {
-        return ( uint64_t )a >> -b;
+        return (uint64_t)a >> -b;
     }
     else
     {
         return 0;
     }
 }
-int64_t machine_Machine_shr_nlint64( int64_t a, int64_t b )
+int64_t machine_Machine_shr_nlint64(int64_t a, int64_t b)
 {
-    if( NELUA_LIKELY( b >= 0 && b < 64 ) )
+    if (NELUA_LIKELY(b >= 0 && b < 64))
     {
-        return ( uint64_t )a >> b;
+        return (uint64_t)a >> b;
     }
-    else if( NELUA_UNLIKELY( b < 0 && b > -64 ) )
+    else if (NELUA_UNLIKELY(b < 0 && b > -64))
     {
-        return ( uint64_t )a << -b;
+        return (uint64_t)a << -b;
     }
     else
     {
         return 0;
     }
 }
-int64_t machine_Machine_asr_nlint64( int64_t a, int64_t b )
+int64_t machine_Machine_asr_nlint64(int64_t a, int64_t b)
 {
-    if( NELUA_LIKELY( b >= 0 && b < 64 ) )
+    if (NELUA_LIKELY(b >= 0 && b < 64))
     {
         return a >> b;
     }
-    else if( NELUA_UNLIKELY( b >= 64 ) )
+    else if (NELUA_UNLIKELY(b >= 64))
     {
         return a < 0 ? -1 : 0;
     }
-    else if( NELUA_UNLIKELY( b < 0 && b > -64 ) )
+    else if (NELUA_UNLIKELY(b < 0 && b > -64))
     {
         return a << -b;
     }
@@ -822,70 +879,70 @@ int64_t machine_Machine_asr_nlint64( int64_t a, int64_t b )
         return 0;
     }
 }
-__int128 machine_Machine_shr_nlint128( __int128 a, __int128 b )
+__int128 machine_Machine_shr_nlint128(__int128 a, __int128 b)
 {
-    if( NELUA_LIKELY( b >= 0 && b < 128 ) )
+    if (NELUA_LIKELY(b >= 0 && b < 128))
     {
-        return ( unsigned __int128 )a >> b;
+        return (unsigned __int128)a >> b;
     }
-    else if( NELUA_UNLIKELY( b < 0 && b > -128 ) )
+    else if (NELUA_UNLIKELY(b < 0 && b > -128))
     {
-        return ( unsigned __int128 )a << -b;
+        return (unsigned __int128)a << -b;
     }
     else
     {
         return 0;
     }
 }
-void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
+void machine_Machine_execute(machine_Machine_ptr self, uint32_t inst)
 {
-    uint32_t opcode = ( ( inst >> 0 ) & 0b1111111 );
-    RegIndex rd = ( ( inst >> 7 ) & 0b11111 );
-    RegIndex rs1 = ( ( inst >> 15 ) & 0b11111 );
-    RegIndex rs2 = ( ( inst >> 20 ) & 0b11111 );
-    switch( opcode )
+    uint32_t opcode = ((inst >> 0) & 0b1111111);
+    RegIndex rd     = ((inst >> 7) & 0b11111);
+    RegIndex rs1    = ((inst >> 15) & 0b11111);
+    RegIndex rs2    = ((inst >> 20) & 0b11111);
+    switch (opcode)
     {
     case 0b0000011: // load memory
     {
-        uint32_t funct3 = ( ( inst >> 12 ) & 0b111 );
-        int64_t offset = ( int64_t )( ( ( int32_t )( ( uint32_t )( int32_t )( ( inst >> 20 ) & 0b111111111111 ) << 20 ) ) >> 20 );
+        uint32_t funct3 = ((inst >> 12) & 0b111);
+        int64_t offset = (int64_t)(((int32_t)((uint32_t)(int32_t)((inst >> 20) & 0b111111111111) << 20)) >> 20);
         uint64_t addr = reg_read(rs1) + offset;
-        int64_t val = 0;
-        switch( funct3 )
+        int64_t  val  = 0;
+        switch (funct3)
         {
         case 0b000: // lb
         {
-            val = machine_Machine_read_int8( self, addr );
+            val = machine_Machine_read_int8(self, addr);
             break;
         }
         case 0b001: // lh
         {
-            val = machine_Machine_read_int16( self, addr );
+            val = machine_Machine_read_int16(self, addr);
             break;
         }
         case 0b010: // lw
         {
-            val = machine_Machine_read_int32( self, addr );
+            val = machine_Machine_read_int32(self, addr);
             break;
         }
         case 0b011: // ld
         {
-            val = machine_Machine_read_int64( self, addr );
+            val = machine_Machine_read_int64(self, addr);
             break;
         }
         case 0b100: // lbu
         {
-            val = machine_Machine_read_uint8( self, addr );
+            val = machine_Machine_read_uint8(self, addr);
             break;
         }
         case 0b101: // lhu
         {
-            val = machine_Machine_read_uint16( self, addr );
+            val = machine_Machine_read_uint16(self, addr);
             break;
         }
         case 0b110: // lwu
         {
-            val = machine_Machine_read_uint32( self, addr );
+            val = machine_Machine_read_uint32(self, addr);
             break;
         }
         default:
@@ -894,7 +951,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
             break;
         }
         }
-        if( NELUA_LIKELY( ( rd != reg_zero ) ) )
+        if (NELUA_LIKELY((rd != reg_zero)))
         {
             reg_write(rd, (uint64_t)val);
         }
@@ -902,30 +959,31 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
     }
     case 0b100011: // store memory
     {
-        uint32_t funct3 = ( ( inst >> 12 ) & 7 );
-        int64_t imm = ( int64_t )( ( ( int32_t )( ( uint32_t )( int32_t )( ( ( inst >> 20 ) & 4064 ) | ( ( inst >> 7 ) & 31 ) ) << 20 ) ) >> 20 );
+        uint32_t funct3 = ((inst >> 12) & 7);
+        int64_t  imm =
+            (int64_t)(((int32_t)((uint32_t)(int32_t)(((inst >> 20) & 4064) | ((inst >> 7) & 31)) << 20)) >> 20);
         uint64_t addr = reg_read(rs1) + imm;
-        uint64_t val = reg_read(rs2);
-        switch( funct3 )
+        uint64_t val  = reg_read(rs2);
+        switch (funct3)
         {
         case 0x0:
         {
-            machine_Machine_write_uint8( self, addr, ( uint8_t )val );
+            machine_Machine_write_uint8(self, addr, (uint8_t)val);
             break;
         }
         case 0x1:
         {
-            machine_Machine_write_uint16( self, addr, ( uint16_t )val );
+            machine_Machine_write_uint16(self, addr, (uint16_t)val);
             break;
         }
         case 0x2:
         {
-            machine_Machine_write_uint32( self, addr, ( uint32_t )val );
+            machine_Machine_write_uint32(self, addr, (uint32_t)val);
             break;
         }
         case 0x3:
         {
-            machine_Machine_write_uint64( self, addr, val );
+            machine_Machine_write_uint64(self, addr, val);
             break;
         }
         default:
@@ -938,25 +996,25 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
     }
     case 0b0010011: // arithmetic
     {
-        uint32_t funct3 = ( ( inst >> 12 ) & 7 );
-        int64_t imm = ( int64_t )( ( ( int32_t )( ( uint32_t )( int32_t )( ( inst >> 20 ) & 4095 ) << 20 ) ) >> 20 );
-        uint32_t shamt = ( ( inst >> 20 ) & 63 );
-        int64_t val = reg_read(rs1);
-        switch( funct3 )
+        uint32_t funct3 = ((inst >> 12) & 7);
+        int64_t  imm    = (int64_t)(((int32_t)((uint32_t)(int32_t)((inst >> 20) & 4095) << 20)) >> 20);
+        uint32_t shamt  = ((inst >> 20) & 63);
+        int64_t  val    = reg_read(rs1);
+        switch (funct3)
         {
         case 0b000: // addi
         {
-            val = ( val + imm );
+            val = (val + imm);
             break;
         }
         case 0b001: // slli
         {
-            val = machine_Machine_shl_nlint64( val, shamt );
+            val = machine_Machine_shl_nlint64(val, shamt);
             break;
         }
         case 0b010: // slti
         {
-            if( ( val < imm ) )
+            if ((val < imm))
             {
                 val = 1;
             }
@@ -968,7 +1026,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
         }
         case 0b011: // sltiu
         {
-            if( ( ( uint64_t )val < ( uint64_t )imm ) )
+            if (((uint64_t)val < (uint64_t)imm))
             {
                 val = 1;
             }
@@ -980,22 +1038,22 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
         }
         case 0b100: // xori
         {
-            val = ( val ^ imm );
+            val = (val ^ imm);
             break;
         }
         case 0b101: // srli
         {
-            uint32_t funct6 = ( ( inst >> 26 ) & 63 );
-            switch( ( funct6 >> 4 ) )
+            uint32_t funct6 = ((inst >> 26) & 63);
+            switch ((funct6 >> 4))
             {
             case 0x0:
             {
-                val = machine_Machine_shr_nlint64( val, shamt );
+                val = machine_Machine_shr_nlint64(val, shamt);
                 break;
             }
             case 0x1:
             {
-                val = machine_Machine_asr_nlint64( val, shamt );
+                val = machine_Machine_asr_nlint64(val, shamt);
                 break;
             }
             default:
@@ -1008,12 +1066,12 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
         }
         case 0b110: // ori
         {
-            val = ( val | imm );
+            val = (val | imm);
             break;
         }
         case 0b111: // andi
         {
-            val = ( val & imm );
+            val = (val & imm);
             break;
         }
         default:
@@ -1022,7 +1080,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
             break;
         }
         }
-        if( NELUA_LIKELY( ( rd != reg_zero ) ) )
+        if (NELUA_LIKELY((rd != reg_zero)))
         {
             reg_write(rd, val);
         }
@@ -1030,35 +1088,35 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
     }
     case 0x1b:
     {
-        uint32_t funct3 = ( ( inst >> 12 ) & 7 );
-        int64_t imm = ( int64_t )( ( ( int32_t )( ( uint32_t )( int32_t )( ( inst >> 20 ) & 4095 ) << 20 ) ) >> 20 );
-        int64_t val = reg_read(rs1);
-        switch( funct3 )
+        uint32_t funct3 = ((inst >> 12) & 7);
+        int64_t  imm    = (int64_t)(((int32_t)((uint32_t)(int32_t)((inst >> 20) & 4095) << 20)) >> 20);
+        int64_t  val    = reg_read(rs1);
+        switch (funct3)
         {
         case 0x0:
         {
-            val = ( int64_t )( int32_t )( val + imm );
+            val = (int64_t)(int32_t)(val + imm);
             break;
         }
         case 0x1:
         {
-            val = ( int64_t )( int32_t )machine_Machine_shl_nlint64( val, imm );
+            val = (int64_t)(int32_t)machine_Machine_shl_nlint64(val, imm);
             break;
         }
         case 0x5:
         {
-            uint32_t shamt = rs2;
-            uint32_t funct7 = ( ( inst >> 25 ) & 127 );
-            switch( ( funct7 >> 5 ) )
+            uint32_t shamt  = rs2;
+            uint32_t funct7 = ((inst >> 25) & 127);
+            switch ((funct7 >> 5))
             {
             case 0x0:
             {
-                val = ( int64_t )( int32_t )machine_Machine_shr_nlint64( val, shamt );
+                val = (int64_t)(int32_t)machine_Machine_shr_nlint64(val, shamt);
                 break;
             }
             case 0x1:
             {
-                val = ( int64_t )( int32_t )machine_Machine_asr_nlint64( val, shamt );
+                val = (int64_t)(int32_t)machine_Machine_asr_nlint64(val, shamt);
                 break;
             }
             default:
@@ -1075,7 +1133,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
             break;
         }
         }
-        if( NELUA_LIKELY( ( rd != reg_zero ) ) )
+        if (NELUA_LIKELY((rd != reg_zero)))
         {
             reg_write(rd, val);
         }
@@ -1083,31 +1141,31 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
     }
     case 0x33:
     {
-        uint32_t funct3 = ( ( inst >> 12 ) & 7 );
-        uint32_t funct7 = ( ( inst >> 25 ) & 127 );
-        int64_t val1 = reg_read(rs1);
-        int64_t val2 = reg_read(rs2);
-        int64_t val = 0;
-        switch( ( ( funct7 << 3 ) | funct3 ) )
+        uint32_t funct3 = ((inst >> 12) & 7);
+        uint32_t funct7 = ((inst >> 25) & 127);
+        int64_t  val1   = reg_read(rs1);
+        int64_t  val2   = reg_read(rs2);
+        int64_t  val    = 0;
+        switch (((funct7 << 3) | funct3))
         {
         case 0x0:
         {
-            val = ( val1 + val2 );
+            val = (val1 + val2);
             break;
         }
         case 0x100:
         {
-            val = ( val1 - val2 );
+            val = (val1 - val2);
             break;
         }
         case 0x1:
         {
-            val = machine_Machine_shl_nlint64( val1, ( val2 & 0x1f ) );
+            val = machine_Machine_shl_nlint64(val1, (val2 & 0x1f));
             break;
         }
         case 0x2:
         {
-            if( ( val1 < val2 ) )
+            if ((val1 < val2))
             {
                 val = 1;
             }
@@ -1119,7 +1177,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
         }
         case 0x3:
         {
-            if( ( ( uint64_t )val1 < ( uint64_t )val2 ) )
+            if (((uint64_t)val1 < (uint64_t)val2))
             {
                 val = 1;
             }
@@ -1131,110 +1189,112 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
         }
         case 0x4:
         {
-            val = ( val1 ^ val2 );
+            val = (val1 ^ val2);
             break;
         }
         case 0x5:
         {
-            val = machine_Machine_shr_nlint64( val1, ( val2 & 0x1f ) );
+            val = machine_Machine_shr_nlint64(val1, (val2 & 0x1f));
             break;
         }
         case 0x105:
         {
-            val = machine_Machine_asr_nlint64( val1, ( val2 & 0x1f ) );
+            val = machine_Machine_asr_nlint64(val1, (val2 & 0x1f));
             break;
         }
         case 0x6:
         {
-            val = ( val1 | val2 );
+            val = (val1 | val2);
             break;
         }
         case 0x7:
         {
-            val = ( val1 & val2 );
+            val = (val1 & val2);
             break;
         }
         case 0x8:
         {
-            val = ( val1 * val2 );
+            val = (val1 * val2);
             break;
         }
         case 0x9:
         {
-            val = ( int64_t )( uint64_t )machine_Machine_shr_nlint128( ( ( __int128 )val1 * ( __int128 )val2 ), 64 );
+            val = (int64_t)(uint64_t)machine_Machine_shr_nlint128(((__int128)val1 * (__int128)val2), 64);
             break;
         }
         case 0xa:
         {
-            val = ( int64_t )( uint64_t )machine_Machine_shr_nlint128( ( ( __int128 )val1 * ( __int128 )( uint64_t )val2 ), 64 );
+            val = (int64_t)(uint64_t
+            )machine_Machine_shr_nlint128(((__int128)val1 * (__int128)(uint64_t)val2), 64);
             break;
         }
         case 0xb:
         {
-            val = ( int64_t )( uint64_t )machine_Machine_shr_nlint128( ( ( __int128 )( uint64_t )val1 * ( __int128 )( uint64_t )val2 ), 64 );
+            val = (int64_t)(uint64_t
+            )machine_Machine_shr_nlint128(((__int128)(uint64_t)val1 * (__int128)(uint64_t)val2), 64);
             break;
         }
         case 0xc:
         {
             int64_t dividend = val1;
-            int64_t divisor = val2;
-            if( NELUA_UNLIKELY( ( ( dividend == ( -9223372036854775807LL - 1 ) ) && ( divisor == -1 ) ) ) )
+            int64_t divisor  = val2;
+            if (NELUA_UNLIKELY(((dividend == (-9223372036854775807LL - 1)) && (divisor == -1))))
             {
-                val = ( -9223372036854775807LL - 1 );
+                val = (-9223372036854775807LL - 1);
             }
-            else if( NELUA_UNLIKELY( ( divisor == 0 ) ) )
+            else if (NELUA_UNLIKELY((divisor == 0)))
             {
                 val = -1;
             }
             else
             {
-                val = ( dividend / divisor );
+                val = (dividend / divisor);
             }
             break;
         }
         case 0xd:
         {
-            uint64_t dividend = ( uint64_t )val1;
-            uint64_t divisor = ( uint64_t )val2;
-            if( NELUA_UNLIKELY( ( divisor == 0 ) ) )
+            uint64_t dividend = (uint64_t)val1;
+            uint64_t divisor  = (uint64_t)val2;
+            if (NELUA_UNLIKELY((divisor == 0)))
             {
                 val = -1;
             }
             else
             {
-                val = ( int64_t )( dividend / divisor );
+                val = (int64_t)(dividend / divisor);
             }
             break;
         }
         case 0xe:
         {
             int64_t dividend = val1;
-            int64_t divisor = val2;
-            if( NELUA_UNLIKELY( ( ( dividend == ( -9223372036854775807LL - 1 ) ) && ( divisor == -1 ) ) ) )
+            int64_t divisor  = val2;
+            if (NELUA_UNLIKELY(((dividend == (-9223372036854775807LL - 1)) && (divisor == -1))))
             {
                 val = 0;
             }
-            else if( NELUA_UNLIKELY( ( divisor == 0 ) ) )
+            else if (NELUA_UNLIKELY((divisor == 0)))
             {
                 val = dividend;
             }
             else
             {
-                val = ( dividend % divisor );
+                val = (dividend % divisor);
             }
             break;
         }
         case 0xf:
         {
-            uint64_t dividend = ( uint64_t )val1;
-            uint64_t divisor = ( uint64_t )val2;
-            if( NELUA_UNLIKELY( ( divisor == 0 ) ) )
+            uint64_t dividend = (uint64_t)val1;
+            uint64_t divisor  = (uint64_t)val2;
+            if (NELUA_UNLIKELY((divisor == 0)))
             {
-                val = ( int64_t )dividend;
+                val = (int64_t)dividend;
             }
             else
             {
-                val = ( int64_t )( dividend % divisor );
+                val = (int64_t)(dividend % divisor);
             }
             break;
         }
@@ -1244,7 +1304,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
             break;
         }
         }
-        if( NELUA_LIKELY( ( rd != reg_zero ) ) )
+        if (NELUA_LIKELY((rd != reg_zero)))
         {
             reg_write(rd, val);
         }
@@ -1252,104 +1312,104 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
     }
     case 0x3b:
     {
-        uint32_t funct3 = ( ( inst >> 12 ) & 7 );
-        uint32_t funct7 = ( ( inst >> 25 ) & 127 );
-        int64_t val1 = reg_read(rs1);
-        int64_t val2 = reg_read(rs2);
-        int64_t val;
-        switch( ( ( funct7 << 3 ) | funct3 ) )
+        uint32_t funct3 = ((inst >> 12) & 7);
+        uint32_t funct7 = ((inst >> 25) & 127);
+        int64_t  val1   = reg_read(rs1);
+        int64_t  val2   = reg_read(rs2);
+        int64_t  val;
+        switch (((funct7 << 3) | funct3))
         {
         case 0x0:
         {
-            val = ( int64_t )( int32_t )( val1 + val2 );
+            val = (int64_t)(int32_t)(val1 + val2);
             break;
         }
         case 0x100:
         {
-            val = ( int64_t )( int32_t )( val1 - val2 );
+            val = (int64_t)(int32_t)(val1 - val2);
             break;
         }
         case 0x1:
         {
-            val = ( int64_t )( int32_t )machine_Machine_shl_nlint64( val1, ( val2 & 0x1f ) );
+            val = (int64_t)(int32_t)machine_Machine_shl_nlint64(val1, (val2 & 0x1f));
             break;
         }
         case 0x5:
         {
-            val = ( int64_t )( int32_t )machine_Machine_shr_nlint64( val1, ( val2 & 0x1f ) );
+            val = (int64_t)(int32_t)machine_Machine_shr_nlint64(val1, (val2 & 0x1f));
             break;
         }
         case 0x105:
         {
-            val = ( int64_t )( int32_t )machine_Machine_asr_nlint64( val1, ( val2 & 0x1f ) );
+            val = (int64_t)(int32_t)machine_Machine_asr_nlint64(val1, (val2 & 0x1f));
             break;
         }
         case 0x8:
         {
-            val = ( int64_t )( ( int32_t )val1 * ( int32_t )val2 );
+            val = (int64_t)((int32_t)val1 * (int32_t)val2);
             break;
         }
         case 0xc:
         {
-            int32_t dividend = ( int32_t )val1;
-            int32_t divisor = ( int32_t )val2;
-            if( NELUA_UNLIKELY( ( ( dividend == ( -2147483647 - 1 ) ) && ( divisor == -1 ) ) ) )
+            int32_t dividend = (int32_t)val1;
+            int32_t divisor  = (int32_t)val2;
+            if (NELUA_UNLIKELY(((dividend == (-2147483647 - 1)) && (divisor == -1))))
             {
                 val = -2147483648LL;
             }
-            else if( NELUA_UNLIKELY( ( divisor == 0 ) ) )
+            else if (NELUA_UNLIKELY((divisor == 0)))
             {
                 val = -1;
             }
             else
             {
-                val = ( int64_t )( dividend / divisor );
+                val = (int64_t)(dividend / divisor);
             }
             break;
         }
         case 0xd:
         {
-            uint32_t dividend = ( uint32_t )val1;
-            uint32_t divisor = ( uint32_t )val2;
-            if( NELUA_UNLIKELY( ( divisor == 0 ) ) )
+            uint32_t dividend = (uint32_t)val1;
+            uint32_t divisor  = (uint32_t)val2;
+            if (NELUA_UNLIKELY((divisor == 0)))
             {
                 val = -1;
             }
             else
             {
-                val = ( int64_t )( int32_t )( dividend / divisor );
+                val = (int64_t)(int32_t)(dividend / divisor);
             }
             break;
         }
         case 0xe:
         {
-            int32_t dividend = ( int32_t )val1;
-            int32_t divisor = ( int32_t )val2;
-            if( NELUA_UNLIKELY( ( ( dividend == ( -2147483647 - 1 ) ) && ( divisor == -1 ) ) ) )
+            int32_t dividend = (int32_t)val1;
+            int32_t divisor  = (int32_t)val2;
+            if (NELUA_UNLIKELY(((dividend == (-2147483647 - 1)) && (divisor == -1))))
             {
                 val = 0;
             }
-            else if( NELUA_UNLIKELY( ( divisor == 0 ) ) )
+            else if (NELUA_UNLIKELY((divisor == 0)))
             {
-                val = ( int64_t )dividend;
+                val = (int64_t)dividend;
             }
             else
             {
-                val = ( int64_t )( dividend % divisor );
+                val = (int64_t)(dividend % divisor);
             }
             break;
         }
         case 0xf:
         {
-            uint32_t dividend = ( uint32_t )val1;
-            uint32_t divisor = ( uint32_t )val2;
-            if( NELUA_UNLIKELY( ( divisor == 0 ) ) )
+            uint32_t dividend = (uint32_t)val1;
+            uint32_t divisor  = (uint32_t)val2;
+            if (NELUA_UNLIKELY((divisor == 0)))
             {
-                val = ( int64_t )( int32_t )dividend;
+                val = (int64_t)(int32_t)dividend;
             }
             else
             {
-                val = ( int64_t )( int32_t )( dividend % divisor );
+                val = (int64_t)(int32_t)(dividend % divisor);
             }
             break;
         }
@@ -1359,7 +1419,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
             break;
         }
         }
-        if( NELUA_LIKELY( ( rd != reg_zero ) ) )
+        if (NELUA_LIKELY((rd != reg_zero)))
         {
             reg_write(rd, val);
         }
@@ -1367,8 +1427,8 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
     }
     case 0x37:
     {
-        int64_t imm = ( int64_t )( ( ( int32_t )( ( uint32_t )( int32_t )( ( inst << 0 ) & 4294963200LL ) << 0 ) ) >> 0 );
-        if( NELUA_LIKELY( ( rd != reg_zero ) ) )
+        int64_t imm = (int64_t)(((int32_t)((uint32_t)(int32_t)((inst << 0) & 4294963200LL) << 0)) >> 0);
+        if (NELUA_LIKELY((rd != reg_zero)))
         {
             reg_write(rd, imm);
         }
@@ -1376,8 +1436,8 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
     }
     case 0x17:
     {
-        int64_t imm = ( int64_t )( ( ( int32_t )( ( uint32_t )( int32_t )( ( inst << 0 ) & 4294963200LL ) << 0 ) ) >> 0 );
-        if( NELUA_LIKELY( ( rd != reg_zero) ) )
+        int64_t imm = (int64_t)(((int32_t)((uint32_t)(int32_t)((inst << 0) & 4294963200LL) << 0)) >> 0);
+        if (NELUA_LIKELY((rd != reg_zero)))
         {
             reg_write(rd, self->pc + imm);
         }
@@ -1391,22 +1451,27 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
             trace("^^ call\n");
             g_trace_calldepth++;
         }
-        else if(rd != reg_zero)
+        else if (rd != reg_zero)
             trace("sus link register (jal): %d\n", rd);
 #endif // HAS_TRACE
 
-        int64_t imm = ( int64_t )( ( ( int32_t )( ( uint32_t )( int32_t )( ( ( ( ( inst >> 11 ) & 1048576 ) | ( ( inst >> 20 ) & 2046 ) ) | ( ( inst >> 9 ) & 2048 ) ) | ( ( inst << 0 ) & 1044480 ) ) << 11 ) ) >> 11 );
-        if( NELUA_LIKELY( ( rd != reg_zero ) ) )
+        int64_t imm = (int64_t)(((int32_t)((uint32_t)(int32_t)(((((inst >> 11) & 1048576) | ((inst >> 20) & 2046))
+                                                                | ((inst >> 9) & 2048))
+                                                               | ((inst << 0) & 1044480))
+                                           << 11))
+                                >> 11);
+        if (NELUA_LIKELY((rd != reg_zero)))
         {
             reg_write(rd, self->pc + 4);
         }
-        self->pc = ( self->pc + imm );
+        self->pc = (self->pc + imm);
         return;
     }
     case 0b1100111: // jalr (ret)
     {
 #ifdef HAS_TRACE
-        if (rs1 == reg_ra) {
+        if (rs1 == reg_ra)
+        {
             trace("^^ return\n");
             g_trace_calldepth--;
         }
@@ -1414,11 +1479,11 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
             trace("sus link register (ret): %d\n", rs1);
 #endif // HAS_TRACE
 
-        int64_t imm = ( int64_t )( ( ( int32_t )( ( uint32_t )( int32_t )( ( inst >> 20 ) & 4095 ) << 20 ) ) >> 20 );
-        int64_t pc = ( self->pc + 4 );
-        self->pc = ( ( int64_t )( reg_read(rs1) + imm) & -2);
+        int64_t imm = (int64_t)(((int32_t)((uint32_t)(int32_t)((inst >> 20) & 4095) << 20)) >> 20);
+        int64_t pc  = (self->pc + 4);
+        self->pc    = ((int64_t)(reg_read(rs1) + imm) & -2);
 
-        if( NELUA_UNLIKELY( ( rd != reg_zero ) ) )
+        if (NELUA_UNLIKELY((rd != reg_zero)))
         {
             reg_write(rd, pc);
         }
@@ -1427,41 +1492,45 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
     case 0b1100011: // conditional branch
     {
         trace("^^ conditional branch\n");
-        uint32_t funct3 = ( ( inst >> 12 ) & 7 );
-        int64_t imm = ( int64_t )( ( ( int32_t )( ( uint32_t )( int32_t )( ( ( ( ( inst >> 19 ) & 4096 ) | ( ( inst >> 20 ) & 2016 ) ) | ( ( inst >> 7 ) & 30 ) ) | ( ( inst << 4 ) & 2048 ) ) << 19 ) ) >> 19 );
+        uint32_t funct3 = ((inst >> 12) & 7);
+        int64_t imm = (int64_t)(((int32_t)((uint32_t)(int32_t)(((((inst >> 19) & 4096) | ((inst >> 20) & 2016))
+                                                                | ((inst >> 7) & 30))
+                                                               | ((inst << 4) & 2048))
+                                           << 19))
+                                >> 19);
         uint64_t val1 = reg_read(rs1);
         uint64_t val2 = reg_read(rs2);
-        bool cond = 0;
-        switch( funct3 )
+        bool     cond = 0;
+        switch (funct3)
         {
         case 0b000: // beq
         {
-            cond = ( val1 == val2 );
+            cond = (val1 == val2);
             break;
         }
         case 0b001: // bne
         {
-            cond = ( val1 != val2 );
+            cond = (val1 != val2);
             break;
         }
         case 0b100: // blt
         {
-            cond = ( ( int64_t )val1 < ( int64_t )val2 );
+            cond = ((int64_t)val1 < (int64_t)val2);
             break;
         }
         case 0b101: // bge
         {
-            cond = ( ( int64_t )val1 >= ( int64_t )val2 );
+            cond = ((int64_t)val1 >= (int64_t)val2);
             break;
         }
         case 0b110: // bltu
         {
-            cond = ( val1 < val2 );
+            cond = (val1 < val2);
             break;
         }
         case 0b111: // bgeu
         {
-            cond = ( val1 >= val2 );
+            cond = (val1 >= val2);
             break;
         }
         default:
@@ -1470,9 +1539,9 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
             break;
         }
         }
-        if( cond )
+        if (cond)
         {
-            self->pc = ( self->pc + imm );
+            self->pc = (self->pc + imm);
             return;
         }
         break;
@@ -1483,8 +1552,8 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
     }
     case 0x73:
     {
-        uint32_t funct11 = ( ( inst >> 20 ) & 4095 );
-        switch( funct11 )
+        uint32_t funct11 = ((inst >> 20) & 4095);
+        switch (funct11)
         {
         case 0x0:
         {
@@ -1495,7 +1564,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
         case 0x1:
         {
             self->exitcode = -1;
-            self->running = false;
+            self->running  = false;
             break;
         }
         default:
@@ -1512,34 +1581,34 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
         break;
     }
     }
-    self->pc = ( self->pc + 4 );
+    self->pc = (self->pc + 4);
 }
-void machine_Machine_run( machine_Machine_ptr self )
+void machine_Machine_run(machine_Machine_ptr self)
 {
     self->running = true;
-    while( NELUA_LIKELY( self->running ) )
+    while (NELUA_LIKELY(self->running))
     {
-        uint32_t inst = machine_Machine_fetch( self );
+        uint32_t inst = machine_Machine_fetch(self);
 
-        unsigned char* p_inst = ( unsigned char* )&inst;
+        unsigned char* p_inst = (unsigned char*)&inst;
         (void)p_inst;
         trace("pc: 0x%llx, inst: %02x %02x %02x %02x\n", self->pc, p_inst[0], p_inst[1], p_inst[2], p_inst[3]);
 
-        machine_Machine_execute( self, inst );
+        machine_Machine_execute(self, inst);
     }
 }
-int main( int argc, char** argv )
+int main(int argc, char** argv)
 {
-    if(argc < 2)
+    if (argc < 2)
     {
         puts("please supply a RV64I program to run!");
         return EXIT_FAILURE;
     }
-    g_trace = argc > 2 && _stricmp(argv[2], "--trace") == 0;
+    g_trace                     = argc > 2 && _stricmp(argv[2], "--trace") == 0;
     machine_Machine_ptr machine = malloc(sizeof(machine_Machine));
     memset(machine, 0, sizeof(machine_Machine));
     machine_Machine_loadfile(machine, argv[1]);
     machine_Machine_run(machine);
-    exit( ( int )machine->exitcode );
+    exit((int)machine->exitcode);
     return EXIT_SUCCESS;
 }
