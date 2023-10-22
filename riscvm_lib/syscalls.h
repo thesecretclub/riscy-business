@@ -11,10 +11,10 @@ enum {
   // SYSCALL_REALLOC   = 10004,
   // SYSCALL_FREE      = 10005,
 
-  // SYSCALL_MEMCPY    = 10006,
+  SYSCALL_MEMCPY    = 10006,
   SYSCALL_MEMSET    = 10007,
-  // SYSCALL_MEMMOVE   = 10008,
-  // SYSCALL_MEMCMP    = 10009,
+  SYSCALL_MEMMOVE   = 10008,
+  SYSCALL_MEMCMP    = 10009,
 
   SYSCALL_PRINTS    = 10101,
   SYSCALL_PRINTI    = 10102,
@@ -29,8 +29,8 @@ enum {
   WIN_SYSCALL_7     = 20007,
   WIN_SYSCALL_8     = 20008,
   WIN_SYSCALL_9     = 20009,
-  WIN_SYSCALL_10     = 20010,
-  WIN_SYSCALL_11     = 20011,
+  WIN_SYSCALL_10    = 20010,
+  WIN_SYSCALL_11    = 20011,
   WIN_SYSCALL_12    = 20012,
   WIN_SYSCALL_13    = 20013,
 };
@@ -314,6 +314,9 @@ static inline void sys_prints(const char* s) { syscall1(SYSCALL_PRINTS, (long)(s
 static inline void sys_printi(long i) { syscall1(SYSCALL_PRINTI, i); }
 
 static inline void* sys_memset(void* vdest, int ch, size_t size) { return (void*)(uintptr_t)syscall3(SYSCALL_MEMSET, (long)vdest, ch, (long)size); }
+static inline void* sys_memcpy(void* vdest, const void* vsrc, size_t size) { return (void*)(uintptr_t)syscall3(SYSCALL_MEMCPY, (long)vdest, (long)vsrc, (long)size); }
+static inline void* sys_memmove(void* vdest, const void* vsrc, size_t size) { return (void*)(uintptr_t)syscall3(SYSCALL_MEMMOVE, (long)vdest, (long)vsrc, (long)size); }
+static inline int sys_memcmp(const void* vdest, const void* vsrc, size_t size) { return syscall3(SYSCALL_MEMCMP, (long)vdest, (long)vsrc, (long)size); }
 
 #define sys_assert(expr) { \
     if(!(expr)) { \

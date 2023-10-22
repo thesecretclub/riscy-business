@@ -660,15 +660,35 @@ NELUA_INLINE uint64_t machine_Machine_handle_syscall( machine_Machine_ptr self, 
         } ) );
         break;
     }
+    case 10006:
+    {
+        void* src = machine_Machine_getptr( self, get_reg(10) );
+        void* dest = machine_Machine_getptr( self, get_reg(11) );
+        void* res = memcpy( dest, src, ( size_t )get_reg(12) );
+        return ( uint64_t )res;
+    }
     case 10007:
     {
         void* dest = machine_Machine_getptr( self, get_reg(10) );
         void* res = memset( dest, ( int )get_reg(11), ( size_t )get_reg(12) );
         return ( uint64_t )res;
     }
+    case 10008:
+    {
+        void* src = machine_Machine_getptr( self, get_reg( 10 ) );
+        void* dest = machine_Machine_getptr( self, get_reg( 11 ) );
+        void* res = memmove( dest, src, ( size_t )get_reg( 12 ) );
+        return ( uint64_t )res;
+    }
+    case 10009:
+    {
+        void* src1 = machine_Machine_getptr( self, get_reg( 10 ) );
+        void* src2 = machine_Machine_getptr( self, get_reg( 11 ) );
+        return ( uint64_t )memcmp( src1, src2, ( size_t )get_reg( 12 ) );
+    }
     case 10101:
     {
-        char* s = ( char* )machine_Machine_getptr( self, get_reg(10) );
+        char* s = ( char* )machine_Machine_getptr( self, get_reg( 10 ) );
         nelua_print_1( s );
         break;
     }
@@ -1492,7 +1512,7 @@ void machine_Machine_execute( machine_Machine_ptr self, uint32_t inst )
         int64_t imm = ( int64_t )( ( ( int32_t )( ( uint32_t )( int32_t )( ( inst >> 20 ) & 4095 ) << 20 ) ) >> 20 );
         int64_t pc = ( self->pc + 4 );
         self->pc = ( ( int64_t )( ( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ rs1 ] + imm ) & -2 );
-        printf("jalr: pc = %llx\n", self->pc);
+        //printf("jalr: pc = %llx\n", self->pc);
         if( NELUA_UNLIKELY( ( rd != 0 ) ) )
         {
             ( ( ( nluint64_arr32_cast* )&self->regs )->a ).v[ rd ] = ( uint64_t )pc;
@@ -1605,7 +1625,7 @@ void machine_Machine_run( machine_Machine_ptr self )
         uint32_t inst = machine_Machine_fetch( self );
         unsigned char* p_inst = ( unsigned char* )&inst;
 
-        printf("pc: 0x%08x, inst: %02x %02x %02x %02x\n", self->pc, p_inst[0], p_inst[1], p_inst[2], p_inst[3]);
+        //printf("pc: 0x%08x, inst: %02x %02x %02x %02x\n", self->pc, p_inst[0], p_inst[1], p_inst[2], p_inst[3]);
 
         machine_Machine_execute( self, inst );
     }
