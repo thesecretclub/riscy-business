@@ -5,6 +5,7 @@ BASE = 0x8000000;
 SECTIONS
 {
 	. = BASE;
+	__base = .;
 
 	.text : ALIGN(16) {
         . = BASE;
