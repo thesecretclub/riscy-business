@@ -9,6 +9,9 @@ struct Blah2
     }
 };
 
+static Blah2 blah = Blah2(34, 12);
+static Blah2 blah2 = Blah2(78, 56);
+
 #define NtQueryInformationProcess 0x19
 
 typedef unsigned int NTSTATUS;
@@ -23,8 +26,6 @@ typedef struct _PROCESS_BASIC_INFORMATION
     uintptr_t InheritedFromUniqueProcessId;
 } PROCESS_BASIC_INFORMATION, *PPROCESS_BASIC_INFORMATION;
 
-static Blah2 blah = Blah2(12, 34);
-static Blah2 blah2 = Blah2(56, 78);
 
 int get_proc_id()
 {
