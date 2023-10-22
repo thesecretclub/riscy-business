@@ -6,3 +6,4 @@
 - https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-elf.adoc
 - https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc
 - https://github.com/torvalds/linux/blob/1acfd2bd3f0d9dc34ea1871a445c554220945d9f/arch/riscv/kernel/sbi.c#L25-L49
+- https://msyksphinz-self.github.io/riscv-isadoc/html/rvi.html

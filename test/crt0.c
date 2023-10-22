@@ -45,7 +45,7 @@ static __attribute((noinline)) void relocs() {
 
     for(Relocation* itr = (Relocation*)(__relocs_start + sizeof(uint32_t)); itr->type != R_RISCV_NONE; itr++) {
         if(itr->type == R_RISCV_64) {
-            uint64_t* ptr = (uint64_t*)(uintptr_t)itr->offset;
+            uint64_t* ptr = (uint64_t*)((uintptr_t)itr->offset - LINK_BASE + load_base);
             *ptr -= LINK_BASE;
             *ptr += load_base;
         } else {
