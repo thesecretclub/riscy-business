@@ -14,9 +14,10 @@ char myData[] = "Hello, World!";
 }
 
 int bb();
+int bb2();
 
-int main() {
-    int x = bb();
+__attribute((noinline)) int main() {
+    int x = bb() + bb2();
     lfsr16_obfuscate(myData, sizeof(myData) - 1, 1337 + x);
     return 42;
 }

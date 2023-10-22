@@ -1,14 +1,14 @@
 ENTRY(_start)
 
-BASE = 0x8000000;
+LINK_BASE = 0x8000000;
 
 SECTIONS
 {
-	. = BASE;
+	. = LINK_BASE;
 	__base = .;
 
 	.text : ALIGN(16) {
-        . = BASE;
+        . = LINK_BASE;
 		*(.text)
         *(.text.*)
 	}

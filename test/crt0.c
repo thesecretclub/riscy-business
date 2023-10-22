@@ -1,21 +1,26 @@
-static void exit();
+static void exit(int exit_code);
 static void relocs();
 static void init();
-int main();
+int __attribute((noinline)) main();
 
 void _start() {
     relocs();
     init();
-    main();
-    exit();
+    exit(main());
     asm volatile("ebreak");
 }
 
 #include <stdint.h>
 
-static void exit() {
-    register long syscall_id asm("s10") = 10000;  
-    asm volatile ("scall" : : "r"(syscall_id));
+static __attribute((noinline)) void exit(int exit_code) {
+    register uintptr_t a0 asm("a0") = exit_code;
+    register uintptr_t a7 asm("a7") = 10000;
+    asm volatile (
+        "scall"
+        : "+r"(a0)
+        : "r"(a7)
+        : "memory"
+    );
 }
 
 typedef struct {
@@ -31,7 +36,7 @@ extern uint8_t __relocs_start[];
 #define R_RISCV_NONE 0
 #define R_RISCV_64 2
 
-static void relocs() {
+static __attribute((noinline)) void relocs() {
     if(*(uint32_t*)__relocs_start != 'ALER') {
         asm volatile("ebreak");
     }
@@ -53,8 +58,7 @@ typedef void(*InitFunction)();
 extern InitFunction __init_array_start;
 extern InitFunction __init_array_end;
 
-static void init() {
-    // Call the init functions
+static __attribute((optnone)) void init() {
     for(InitFunction* itr = &__init_array_start; itr != &__init_array_end; itr++) {
         (*itr)();
     }

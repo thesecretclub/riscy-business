@@ -3,3 +3,6 @@
 - https://docs.oracle.com/cd/E19957-01/806-0641/6j9vuqujs/index.html#chapter6-tbl-53
 - https://llvm.org/doxygen/BinaryFormat_2ELF_8h_source.html
 - https://sites.uclouvain.be/SystInfo/usr/include/linux/elf.h.html
+- https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-elf.adoc
+- https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc
+- https://github.com/torvalds/linux/blob/1acfd2bd3f0d9dc34ea1871a445c554220945d9f/arch/riscv/kernel/sbi.c#L25-L49
