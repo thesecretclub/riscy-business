@@ -39,11 +39,13 @@ int get_proc_id()
         sizeof(pbi),
         0
     );
-    return status;
+    if(status != 0)
+        return status;
+    return pbi.UniqueProcessId;
 }
 
-extern "C" int bb() { 
-    SYSCALL(SYSCALL_PRINTS, "Hello, world!\n");
+extern "C" int bb() {
+    SYSCALL(SYSCALL_PRINTS, "Hello, world!");
     SYSCALL(SYSCALL_PRINTI, get_proc_id());
     return blah.x + blah2.y;
 }
