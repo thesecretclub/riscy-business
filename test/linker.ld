@@ -38,4 +38,3 @@ SECTIONS
         __relocs_start = .;
     }
 }
- 

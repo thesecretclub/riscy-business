@@ -18,7 +18,7 @@ int _start() {
   PROCESS_BASIC_INFORMATION pbi;
 
   int32_t status = win_syscall5(
-    NtQueryInformationProcess, 
+    NtQueryInformationProcess,
     -1,
     0,
     (uint64_t)&pbi,

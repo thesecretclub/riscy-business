@@ -37,8 +37,6 @@ namespace detail
         return _a0;
     }
 
-    
-
     ALWAYS_INLINE uint64_t syscall_stub(uint64_t code)
     {
         register auto syscall_id asm("a7") = code;
