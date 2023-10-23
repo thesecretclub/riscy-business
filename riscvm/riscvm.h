@@ -105,8 +105,10 @@ typedef union
         uint32_t rd     : 5;
         uint32_t funct3 : 3;
         uint32_t rs1    : 5;
-        uint32_t imm    : 12;
-    } itype;
+        uint32_t rs2    : 5;
+        uint32_t shamt  : 1;
+        uint32_t imm    : 6;
+    } rwtype;
 
     struct
     {
@@ -114,10 +116,8 @@ typedef union
         uint32_t rd     : 5;
         uint32_t funct3 : 3;
         uint32_t rs1    : 5;
-        uint32_t rs2    : 5;
-        uint32_t shamt  : 1;
-        uint32_t imm    : 6;
-    } iwtype;
+        uint32_t imm    : 12;
+    } itype;
 
     struct
     {

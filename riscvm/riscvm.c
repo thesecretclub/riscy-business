@@ -844,7 +844,7 @@ void riscvm_execute(riscvm_ptr self, Instruction inst)
         }
         case 0b001: // slli
         {
-            val = riscvm_shl_int64(val, inst.iwtype.rs2);
+            val = riscvm_shl_int64(val, inst.rwtype.rs2);
             break;
         }
         case 0b010: // slti
@@ -878,13 +878,13 @@ void riscvm_execute(riscvm_ptr self, Instruction inst)
         }
         case 0b101: // srli
         {
-            if (inst.iwtype.shamt)
+            if (inst.rwtype.shamt)
             {
-                val = riscvm_asr_int64(val, inst.iwtype.rs2);
+                val = riscvm_asr_int64(val, inst.rwtype.rs2);
             }
             else
             {
-                val = riscvm_shr_int64(val, inst.iwtype.rs2);
+                val = riscvm_shr_int64(val, inst.rwtype.rs2);
             }
             break;
         }
@@ -928,13 +928,13 @@ void riscvm_execute(riscvm_ptr self, Instruction inst)
         }
         case 0b101: // srliw/sraiw
         {
-            if (inst.iwtype.shamt)
+            if (inst.rwtype.shamt)
             {
-                val = (int64_t)(int32_t)riscvm_asr_int64(val, inst.iwtype.rs2);
+                val = (int64_t)(int32_t)riscvm_asr_int64(val, inst.rwtype.rs2);
             }
             else
             {
-                val = (int64_t)(int32_t)riscvm_shr_int64(val, inst.iwtype.rs2);
+                val = (int64_t)(int32_t)riscvm_shr_int64(val, inst.rwtype.rs2);
             }
             break;
         }
