@@ -113,6 +113,93 @@ struct machine_Machine
     uint64_t regs[32];
     int64_t  exitcode;
 };
+typedef union
+{
+    struct
+    {
+        uint32_t opcode : 7;
+        uint32_t        : 25;
+    };
+
+    struct
+    {
+        uint32_t opcode : 7;
+        uint32_t rd     : 5;
+        uint32_t funct3 : 3;
+        uint32_t rs1    : 5;
+        uint32_t rs2    : 5;
+        uint32_t funct7 : 7;
+    } rtype;
+
+    struct
+    {
+        uint32_t opcode : 7;
+        uint32_t rd     : 5;
+        uint32_t funct3 : 3;
+        uint32_t rs1    : 5;
+        uint32_t imm    : 12;
+    } itype;
+
+    struct
+    {
+        uint32_t opcode : 7;
+        uint32_t rd     : 5;
+        uint32_t funct3 : 3;
+        uint32_t rs1    : 5;
+        uint32_t rs2    : 5;
+        uint32_t shamt  : 1;
+        uint32_t imm    : 6;
+    } iwtype;
+
+    struct
+    {
+        uint32_t opcode : 7;
+        uint32_t rd     : 5;
+        uint32_t imm    : 20;
+    } utype;
+
+    struct
+    {
+        uint32_t opcode : 7;
+        uint32_t rd     : 5;
+        uint32_t imm    : 20;
+    } ujtype;
+
+    struct
+    {
+        uint32_t opcode : 7;
+        uint32_t imm5   : 5;
+        uint32_t funct3 : 3;
+        uint32_t rs1    : 5;
+        uint32_t rs2    : 5;
+        uint32_t imm7   : 7;
+    } stype;
+
+    struct
+    {
+        uint32_t opcode : 7;
+        uint32_t imm5   : 5;
+        uint32_t funct3 : 3;
+        uint32_t rs1    : 5;
+        uint32_t rs2    : 5;
+        uint32_t imm7   : 7;
+    } sbtype;
+
+    int16_t  chunks16[2];
+    uint32_t bits;
+} Instruction;
+
+typedef enum
+{
+    insn_rtype  = 0b0110011,
+    insn_itype  = 0b0010011,
+    insn_stype  = 0b0100011,
+    insn_utype  = 0b0110111,
+    insn_ujtype = 0b1101111,
+    insn_sbtype = 0b1100011,
+    insn_istype = 0b0000011,
+} InstructionType;
+
 static NELUA_INLINE uint32_t machine_Machine_fetch(machine_Machine_ptr self);
 static NELUA_INLINE int8_t   machine_Machine_read_int8(machine_Machine_ptr self, uint64_t addr);
 static NELUA_INLINE int16_t  machine_Machine_read_int16(machine_Machine_ptr self, uint64_t addr);
@@ -127,7 +214,7 @@ static NELUA_INLINE void machine_Machine_write_uint16(machine_Machine_ptr self, 
 static NELUA_INLINE void machine_Machine_write_uint32(machine_Machine_ptr self, uint64_t addr, uint32_t val);
 static NELUA_INLINE void machine_Machine_write_uint64(machine_Machine_ptr self, uint64_t addr, uint64_t val);
 static uint64_t          machine_Machine_handle_syscall(machine_Machine_ptr self, uint64_t code);
-static NELUA_INLINE void machine_Machine_execute(machine_Machine_ptr self, uint32_t inst);
+static NELUA_INLINE void machine_Machine_execute(machine_Machine_ptr self, Instruction inst);
 static NELUA_INLINE int64_t  machine_Machine_shl_nlint64(int64_t a, int64_t b);
 static NELUA_INLINE int64_t  machine_Machine_shr_nlint64(int64_t a, int64_t b);
 static NELUA_INLINE int64_t  machine_Machine_asr_nlint64(int64_t a, int64_t b);
@@ -274,6 +361,11 @@ void machine_Machine_write_uint32(machine_Machine_ptr self, uint64_t addr, uint3
 void machine_Machine_write_uint64(machine_Machine_ptr self, uint64_t addr, uint64_t val)
 {
     memcpy((void*)addr, &val, sizeof(val));
+}
+
+NELUA_INLINE int32_t bit_signer(uint32_t field, uint32_t size)
+{
+    return (field & (1U << (size - 1))) ? (int32_t)(field | (0xFFFFFFFFU << size)) : (int32_t)field;
 }
 
 NELUA_INLINE uint32_t syscall_0_stub(uint32_t id)
@@ -894,21 +986,19 @@ __int128 machine_Machine_shr_nlint128(__int128 a, __int128 b)
         return 0;
     }
 }
-void machine_Machine_execute(machine_Machine_ptr self, uint32_t inst)
+void machine_Machine_execute(machine_Machine_ptr self, Instruction inst)
 {
-    uint32_t opcode = ((inst >> 0) & 0b1111111);
-    RegIndex rd     = ((inst >> 7) & 0b11111);
-    RegIndex rs1    = ((inst >> 15) & 0b11111);
-    RegIndex rs2    = ((inst >> 20) & 0b11111);
-    switch (opcode)
+    // uint32_t opcode = ((inst.bits >> 0) & 0b1111111);
+    RegIndex rd  = ((inst.bits >> 7) & 0b11111);
+    RegIndex rs1 = ((inst.bits >> 15) & 0b11111);
+    RegIndex rs2 = ((inst.bits >> 20) & 0b11111);
+    switch (inst.opcode)
     {
     case 0b0000011: // load memory
     {
-        uint32_t funct3 = ((inst >> 12) & 0b111);
-        int64_t offset = (int64_t)(((int32_t)((uint32_t)(int32_t)((inst >> 20) & 0b111111111111) << 20)) >> 20);
-        uint64_t addr = reg_read(rs1) + offset;
+        uint64_t addr = reg_read(inst.itype.rs1) + inst.itype.imm;
         int64_t  val  = 0;
-        switch (funct3)
+        switch (inst.itype.funct3)
         {
         case 0b000: // lb
         {
@@ -951,20 +1041,18 @@ void machine_Machine_execute(machine_Machine_ptr self, uint32_t inst)
             break;
         }
         }
-        if (NELUA_LIKELY((rd != reg_zero)))
+        if (NELUA_LIKELY((inst.itype.rd != reg_zero)))
         {
-            reg_write(rd, (uint64_t)val);
+            reg_write(inst.itype.rd, (uint64_t)val);
         }
         break;
     }
     case 0b100011: // store memory
     {
-        uint32_t funct3 = ((inst >> 12) & 7);
-        int64_t  imm =
-            (int64_t)(((int32_t)((uint32_t)(int32_t)(((inst >> 20) & 4064) | ((inst >> 7) & 31)) << 20)) >> 20);
-        uint64_t addr = reg_read(rs1) + imm;
-        uint64_t val  = reg_read(rs2);
-        switch (funct3)
+        int32_t  imm  = bit_signer((inst.stype.imm7 << 5) | inst.stype.imm5, 12);
+        uint64_t addr = reg_read(inst.stype.rs1) + imm;
+        uint64_t val  = reg_read(inst.stype.rs2);
+        switch (inst.stype.funct3)
         {
         case 0x0:
         {
@@ -996,11 +1084,9 @@ void machine_Machine_execute(machine_Machine_ptr self, uint32_t inst)
     }
     case 0b0010011: // arithmetic
     {
-        uint32_t funct3 = ((inst >> 12) & 7);
-        int64_t  imm    = (int64_t)(((int32_t)((uint32_t)(int32_t)((inst >> 20) & 4095) << 20)) >> 20);
-        uint32_t shamt  = ((inst >> 20) & 63);
-        int64_t  val    = reg_read(rs1);
-        switch (funct3)
+        int64_t imm = bit_signer(inst.itype.imm, 12);
+        int64_t val = reg_read(inst.itype.rs1);
+        switch (inst.itype.funct3)
         {
         case 0b000: // addi
         {
@@ -1009,7 +1095,7 @@ void machine_Machine_execute(machine_Machine_ptr self, uint32_t inst)
         }
         case 0b001: // slli
         {
-            val = machine_Machine_shl_nlint64(val, shamt);
+            val = machine_Machine_shl_nlint64(val, inst.iwtype.rs2);
             break;
         }
         case 0b010: // slti
@@ -1043,24 +1129,13 @@ void machine_Machine_execute(machine_Machine_ptr self, uint32_t inst)
         }
         case 0b101: // srli
         {
-            uint32_t funct6 = ((inst >> 26) & 63);
-            switch ((funct6 >> 4))
+            if (inst.iwtype.shamt)
             {
-            case 0x0:
-            {
-                val = machine_Machine_shr_nlint64(val, shamt);
-                break;
+                val = machine_Machine_asr_nlint64(val, inst.iwtype.rs2);
             }
-            case 0x1:
+            else
             {
-                val = machine_Machine_asr_nlint64(val, shamt);
-                break;
-            }
-            default:
-            {
-                panic("illegal op-imm shift instruction");
-                break;
-            }
+                val = machine_Machine_shr_nlint64(val, inst.iwtype.rs2);
             }
             break;
         }
@@ -1080,50 +1155,37 @@ void machine_Machine_execute(machine_Machine_ptr self, uint32_t inst)
             break;
         }
         }
-        if (NELUA_LIKELY((rd != reg_zero)))
+        if (NELUA_LIKELY(inst.itype.rd != reg_zero))
         {
-            reg_write(rd, val);
+            reg_write(inst.itype.rd, val);
         }
         break;
     }
-    case 0x1b:
+    case 0b0011011: // rv64i arithmetic
     {
-        uint32_t funct3 = ((inst >> 12) & 7);
-        int64_t  imm    = (int64_t)(((int32_t)((uint32_t)(int32_t)((inst >> 20) & 4095) << 20)) >> 20);
-        int64_t  val    = reg_read(rs1);
-        switch (funct3)
+        int64_t imm = bit_signer(inst.itype.imm, 12);
+        int64_t val = reg_read(inst.itype.rs1);
+        switch (inst.itype.funct3)
         {
-        case 0x0:
+        case 0b000:
         {
             val = (int64_t)(int32_t)(val + imm);
             break;
         }
-        case 0x1:
+        case 0b001:
         {
             val = (int64_t)(int32_t)machine_Machine_shl_nlint64(val, imm);
             break;
         }
-        case 0x5:
+        case 0b101:
         {
-            uint32_t shamt  = rs2;
-            uint32_t funct7 = ((inst >> 25) & 127);
-            switch ((funct7 >> 5))
+            if (inst.iwtype.shamt)
             {
-            case 0x0:
-            {
-                val = (int64_t)(int32_t)machine_Machine_shr_nlint64(val, shamt);
-                break;
+                val = (int64_t)(int32_t)machine_Machine_asr_nlint64(val, inst.iwtype.rs2);
             }
-            case 0x1:
+            else
             {
-                val = (int64_t)(int32_t)machine_Machine_asr_nlint64(val, shamt);
-                break;
-            }
-            default:
-            {
-                panic("illegal op-imm-32 shift instruction");
-                break;
-            }
+                val = (int64_t)(int32_t)machine_Machine_shr_nlint64(val, inst.iwtype.rs2);
             }
             break;
         }
@@ -1133,20 +1195,18 @@ void machine_Machine_execute(machine_Machine_ptr self, uint32_t inst)
             break;
         }
         }
-        if (NELUA_LIKELY((rd != reg_zero)))
+        if (NELUA_LIKELY(inst.itype.rd != reg_zero))
         {
-            reg_write(rd, val);
+            reg_write(inst.itype.rd, val);
         }
         break;
     }
-    case 0x33:
+    case 0b0110011: // R type
     {
-        uint32_t funct3 = ((inst >> 12) & 7);
-        uint32_t funct7 = ((inst >> 25) & 127);
-        int64_t  val1   = reg_read(rs1);
-        int64_t  val2   = reg_read(rs2);
-        int64_t  val    = 0;
-        switch (((funct7 << 3) | funct3))
+        int64_t val1 = reg_read(inst.rtype.rs1);
+        int64_t val2 = reg_read(inst.rtype.rs2);
+        int64_t val  = 0;
+        switch ((inst.rtype.funct7 << 3) | inst.rtype.funct3)
         {
         case 0x0:
         {
@@ -1304,20 +1364,18 @@ void machine_Machine_execute(machine_Machine_ptr self, uint32_t inst)
             break;
         }
         }
-        if (NELUA_LIKELY((rd != reg_zero)))
+        if (NELUA_LIKELY(inst.rtype.rd != reg_zero))
         {
-            reg_write(rd, val);
+            reg_write(inst.rtype.rd, val);
         }
         break;
     }
     case 0x3b:
     {
-        uint32_t funct3 = ((inst >> 12) & 7);
-        uint32_t funct7 = ((inst >> 25) & 127);
-        int64_t  val1   = reg_read(rs1);
-        int64_t  val2   = reg_read(rs2);
-        int64_t  val;
-        switch (((funct7 << 3) | funct3))
+        int64_t val1 = reg_read(inst.rtype.rs1);
+        int64_t val2 = reg_read(inst.rtype.rs2);
+        int64_t val;
+        switch ((inst.rtype.funct7 << 3) | inst.rtype.funct3)
         {
         case 0x0:
         {
@@ -1419,24 +1477,24 @@ void machine_Machine_execute(machine_Machine_ptr self, uint32_t inst)
             break;
         }
         }
-        if (NELUA_LIKELY((rd != reg_zero)))
+        if (NELUA_LIKELY(inst.rtype.rd != reg_zero))
         {
-            reg_write(rd, val);
+            reg_write(inst.rtype.rd, val);
         }
         break;
     }
     case 0x37:
     {
-        int64_t imm = (int64_t)(((int32_t)((uint32_t)(int32_t)((inst << 0) & 4294963200LL) << 0)) >> 0);
-        if (NELUA_LIKELY((rd != reg_zero)))
+        int64_t imm = (int64_t)(((int32_t)((uint32_t)(int32_t)((inst.bits << 0) & 4294963200LL) << 0)) >> 0);
+        if (NELUA_LIKELY(inst.utype.rd != reg_zero))
         {
-            reg_write(rd, imm);
+            reg_write(inst.utype.rd, imm);
         }
         break;
     }
     case 0x17:
     {
-        int64_t imm = (int64_t)(((int32_t)((uint32_t)(int32_t)((inst << 0) & 4294963200LL) << 0)) >> 0);
+        int64_t imm = (int64_t)(((int32_t)((uint32_t)(int32_t)((inst.bits << 0) & 4294963200LL) << 0)) >> 0);
         if (NELUA_LIKELY((rd != reg_zero)))
         {
             reg_write(rd, self->pc + imm);
@@ -1455,11 +1513,13 @@ void machine_Machine_execute(machine_Machine_ptr self, uint32_t inst)
             trace("sus link register (jal): %d\n", rd);
 #endif // HAS_TRACE
 
-        int64_t imm = (int64_t)(((int32_t)((uint32_t)(int32_t)(((((inst >> 11) & 1048576) | ((inst >> 20) & 2046))
-                                                                | ((inst >> 9) & 2048))
-                                                               | ((inst << 0) & 1044480))
-                                           << 11))
-                                >> 11);
+        int64_t imm = (int64_t
+        )(((int32_t
+          )((uint32_t)(int32_t
+            )(((((inst.bits >> 11) & 1048576) | ((inst.bits >> 20) & 2046)) | ((inst.bits >> 9) & 2048))
+              | ((inst.bits << 0) & 1044480))
+            << 11))
+          >> 11);
         if (NELUA_LIKELY((rd != reg_zero)))
         {
             reg_write(rd, self->pc + 4);
@@ -1479,7 +1539,7 @@ void machine_Machine_execute(machine_Machine_ptr self, uint32_t inst)
             trace("sus link register (ret): %d\n", rs1);
 #endif // HAS_TRACE
 
-        int64_t imm = (int64_t)(((int32_t)((uint32_t)(int32_t)((inst >> 20) & 4095) << 20)) >> 20);
+        int64_t imm = (int64_t)(((int32_t)((uint32_t)(int32_t)((inst.bits >> 20) & 4095) << 20)) >> 20);
         int64_t pc  = (self->pc + 4);
         self->pc    = ((int64_t)(reg_read(rs1) + imm) & -2);
 
@@ -1492,15 +1552,17 @@ void machine_Machine_execute(machine_Machine_ptr self, uint32_t inst)
     case 0b1100011: // conditional branch
     {
         trace("^^ conditional branch\n");
-        uint32_t funct3 = ((inst >> 12) & 7);
-        int64_t imm = (int64_t)(((int32_t)((uint32_t)(int32_t)(((((inst >> 19) & 4096) | ((inst >> 20) & 2016))
-                                                                | ((inst >> 7) & 30))
-                                                               | ((inst << 4) & 2048))
-                                           << 19))
-                                >> 19);
-        uint64_t val1 = reg_read(rs1);
-        uint64_t val2 = reg_read(rs2);
-        bool     cond = 0;
+        uint32_t funct3 = ((inst.bits >> 12) & 7);
+        int64_t  imm    = (int64_t
+        )(((int32_t
+          )((uint32_t)(int32_t
+            )(((((inst.bits >> 19) & 4096) | ((inst.bits >> 20) & 2016)) | ((inst.bits >> 7) & 30))
+              | ((inst.bits << 4) & 2048))
+            << 19))
+          >> 19);
+        uint64_t val1   = reg_read(rs1);
+        uint64_t val2   = reg_read(rs2);
+        bool     cond   = 0;
         switch (funct3)
         {
         case 0b000: // beq
@@ -1552,7 +1614,7 @@ void machine_Machine_execute(machine_Machine_ptr self, uint32_t inst)
     }
     case 0x73:
     {
-        uint32_t funct11 = ((inst >> 20) & 4095);
+        uint32_t funct11 = ((inst.bits >> 20) & 4095);
         switch (funct11)
         {
         case 0x0:
@@ -1588,9 +1650,9 @@ void machine_Machine_run(machine_Machine_ptr self)
     self->running = true;
     while (NELUA_LIKELY(self->running))
     {
-        uint32_t inst = machine_Machine_fetch(self);
+        Instruction inst = (Instruction)machine_Machine_fetch(self);
 
-        unsigned char* p_inst = (unsigned char*)&inst;
+        unsigned char* p_inst = (unsigned char*)&inst.bits;
         (void)p_inst;
         trace("pc: 0x%llx, inst: %02x %02x %02x %02x\n", self->pc, p_inst[0], p_inst[1], p_inst[2], p_inst[3]);
 
