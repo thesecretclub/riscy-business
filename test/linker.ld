@@ -13,27 +13,27 @@ SECTIONS
         *(.text.*)
 	}
 
-	.data : ALIGN(16) {
+	.data : {
 		*(.rodata)
 		*(.rodata.*)
 		*(.data)
 		*(.data.*)
 	}
 
-    .init : ALIGN(16) {
+    .init : {
         __init_array_start = .;
         *(.init_array)
         __init_array_end = .;
     }
 
-    .bss : ALIGN(16) {
+    .bss : {
 		*(.bss)
 		*(.bss.*)
         *(.sbss)
 		*(.sbss.*)
 	}
 
-    .relocs : ALIGN(16) {
+    .relocs : {
 		. = . + SIZEOF(.bss);
         __relocs_start = .;
     }
