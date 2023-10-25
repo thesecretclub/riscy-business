@@ -19,3 +19,9 @@ extern "C" int memcmp(const void* vdest, const void* vsrc, uint64_t size)
 {
     return sys_memcmp(vdest, vsrc, size);
 }
+
+extern "C" __attribute__((noreturn)) void exit(int code)
+{
+    sys_exit(code);
+    __builtin_unreachable();
+}

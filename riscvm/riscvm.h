@@ -1,6 +1,7 @@
 #pragma once
 #include <stdio.h>
 #include <stdint.h>
+#include <wchar.h>
 
 #ifdef _DEBUG
 
@@ -26,9 +27,24 @@ static int  g_trace_calldepth = 0;
         }                                               \
     } while (0)
 
+#define panic(...)           \
+    do                       \
+    {                        \
+        printf(__VA_ARGS__); \
+        __debugbreak();      \
+    } while (0)
+
+#define log(...) printf(__VA_ARGS__)
+#define logw(...) wprintf(__VA_ARGS__)
+
 #else
 
 #define trace(...)
+
+#define log(...)
+#define logw(...)
+
+#define panic(...) __debugbreak();
 
 #if defined(__GNUC__) || defined(__clang__)
 #define ALWAYS_INLINE [[gnu::always_inline]]
@@ -65,13 +81,6 @@ static int  g_trace_calldepth = 0;
 #define reg_read(idx) (int64_t) self->regs[idx]
 
 #define reg_write(idx, value) self->regs[idx] = value
-
-#define panic(...)           \
-    do                       \
-    {                        \
-        printf(__VA_ARGS__); \
-        __debugbreak();      \
-    } while (0)
 
 typedef struct
 {

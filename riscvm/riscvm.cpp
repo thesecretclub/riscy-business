@@ -5,7 +5,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdlib.h>
-#include <wchar.h>
 
 #include "riscvm.h"
 
@@ -20,14 +19,14 @@ void riscvm_loadfile(riscvm_ptr self, const char* filename)
     FILE* fp = fopen(filename, "rb");
     if ((!(fp != NULL)))
     {
-        puts("failed to open file");
+        log("failed to open file\n");
     }
     fseek(fp, 0, SEEK_END);
     long size = ftell(fp);
     fseek(fp, 0, SEEK_SET);
     if (size > sizeof(g_code))
     {
-        puts("loaded code too big!");
+        log("loaded code too big!\n");
         exit(EXIT_FAILURE);
     }
     fread(g_code, size, 1, fp);
@@ -226,7 +225,7 @@ uint64_t riscvm_handle_syscall(riscvm_ptr self, uint64_t code)
         wchar_t* s = (wchar_t*)riscvm_getptr(self, reg_read(reg_a0));
         if (s != NULL)
         {
-            wprintf(L"%ls\n", s);
+            logw(L"print: %ls\n", s);
         }
         break;
     }
@@ -235,23 +234,23 @@ uint64_t riscvm_handle_syscall(riscvm_ptr self, uint64_t code)
         char* s = (char*)riscvm_getptr(self, reg_read(reg_a0));
         if (s != NULL)
         {
-            puts(s);
+            log("print: %s\n", s);
         }
         break;
     }
     case 10102:
     {
-        printf("value: %lli\n", reg_read(reg_a0));
+        log("value: %lli\n", reg_read(reg_a0));
         break;
     }
     case 10103:
     {
-        printf("value: 0x%llx\n", reg_read(reg_a0));
+        log("value: 0x%llx\n", reg_read(reg_a0));
         break;
     }
     case 10104:
     {
-        printf("%s: 0x%llx\n", reg_read(reg_a0), reg_read(reg_a1));
+        log("%s: 0x%llx\n", reg_read(reg_a0), reg_read(reg_a1));
         break;
     }
     case 20000:
@@ -420,22 +419,22 @@ void riscvm_execute(riscvm_ptr self, Instruction inst)
         uint64_t val  = reg_read(inst.stype.rs2);
         switch (inst.stype.funct3)
         {
-        case 0x0:
+        case 0b00:
         {
             riscvm_write_uint8(self, addr, (uint8_t)val);
             break;
         }
-        case 0x1:
+        case 0b01:
         {
             riscvm_write_uint16(self, addr, (uint16_t)val);
             break;
         }
-        case 0x2:
+        case 0b10:
         {
             riscvm_write_uint32(self, addr, (uint32_t)val);
             break;
         }
-        case 0x3:
+        case 0b11:
         {
             riscvm_write_uint64(self, addr, val);
             break;
@@ -1027,7 +1026,7 @@ int main(int argc, char** argv)
 {
     if (argc < 2)
     {
-        puts("please supply a RV64I program to run!");
+        log("please supply a RV64I program to run!\n");
         return EXIT_FAILURE;
     }
 #ifdef _DEBUG

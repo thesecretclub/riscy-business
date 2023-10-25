@@ -116,22 +116,27 @@ ALWAYS_INLINE inline uint64_t syscall(e_syscall code, Ts... args)
     return detail::invoke_syscall_stub(code, args...);
 }
 
-static inline void* sys_memset(void* vdest, int ch, uint64_t size)
+ALWAYS_INLINE inline void* sys_memset(void* vdest, int ch, uint64_t size)
 {
     return (void*)(uintptr_t)syscall(e_syscall::memset, (long)vdest, ch, (long)size);
 }
 
-static inline void* sys_memcpy(void* vdest, const void* vsrc, uint64_t size)
+ALWAYS_INLINE inline void* sys_memcpy(void* vdest, const void* vsrc, uint64_t size)
 {
     return (void*)(uintptr_t)syscall(e_syscall::memcpy, (long)vdest, (long)vsrc, (long)size);
 }
 
-static inline void* sys_memmove(void* vdest, const void* vsrc, uint64_t size)
+ALWAYS_INLINE inline void* sys_memmove(void* vdest, const void* vsrc, uint64_t size)
 {
     return (void*)(uintptr_t)syscall(e_syscall::memmove, (long)vdest, (long)vsrc, (long)size);
 }
 
-static inline int sys_memcmp(const void* vdest, const void* vsrc, uint64_t size)
+ALWAYS_INLINE inline int sys_memcmp(const void* vdest, const void* vsrc, uint64_t size)
 {
     return syscall(e_syscall::memcmp, (long)vdest, (long)vsrc, (long)size);
+}
+
+ALWAYS_INLINE inline void sys_exit(long status)
+{
+    syscall(e_syscall::exit, status);
 }
