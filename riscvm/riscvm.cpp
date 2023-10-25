@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <wchar.h>
 
 #include "riscvm.h"
 
@@ -560,6 +561,15 @@ uint64_t riscvm_handle_syscall(riscvm_ptr self, uint64_t code)
         void* src2 = riscvm_getptr(self, reg_read(reg_a1));
         return (uint64_t)memcmp(src1, src2, (size_t)reg_read(reg_a2));
     }
+    case 10100:
+    {
+        wchar_t* s = (wchar_t*)riscvm_getptr(self, reg_read(reg_a0));
+        if (s != NULL)
+        {
+            wprintf(L"%ls\n", s);
+        }
+        break;
+    }
     case 10101:
     {
         char* s = (char*)riscvm_getptr(self, reg_read(reg_a0));
@@ -574,98 +584,45 @@ uint64_t riscvm_handle_syscall(riscvm_ptr self, uint64_t code)
         printf("value: %lli\n", reg_read(reg_a0));
         break;
     }
+    case 10103:
+    {
+        printf("value: 0x%llx\n", reg_read(reg_a0));
+        break;
+    }
+    case 10104:
+    {
+        printf("%s: 0x%llx\n", reg_read(reg_a0), reg_read(reg_a1));
+        break;
+    }
     case 20000:
     {
-        uint32_t  id    = (uint32_t)reg_read(reg_a0);
-        uint64_t* args  = (uint64_t*)riscvm_getptr(self, reg_read(reg_a1));
-        size_t    nargs = (size_t)reg_read(reg_a2);
-        switch (nargs)
-        {
-        case 0:
-        {
-            return (uint64_t)syscall_0_stub(id);
-        }
-        case 1:
-        {
-            return (uint64_t)syscall_1_stub(id, args[0]);
-        }
-        case 2:
-        {
-            return (uint64_t)syscall_2_stub(id, args[0], args[1]);
-        }
-        case 3:
-        {
-            return (uint64_t)syscall_3_stub(id, args[0], args[1], args[2]);
-        }
-        case 4:
-        {
-            return (uint64_t)syscall_4_stub(id, args[0], args[1], args[2], args[3]);
-        }
-        case 5:
-        {
-            return (uint64_t)syscall_5_stub(id, args[0], args[1], args[2], args[3], args[4]);
-        }
-        case 6:
-        {
-            return (uint64_t)syscall_6_stub(id, args[0], args[1], args[2], args[3], args[4], args[5]);
-        }
-        case 7:
-        {
-            return (uint64_t)syscall_7_stub(id, args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
-        }
-        case 8:
-        {
-            return (uint64_t
-            )syscall_8_stub(id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
-        }
-        case 9:
-        {
-            return (uint64_t
-            )syscall_9_stub(id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8]);
-        }
-        case 10:
-        {
-            return (uint64_t)syscall_10_stub(
-                id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9]
-            );
-        }
-        case 11:
-        {
-            return (uint64_t)syscall_11_stub(
-                id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10]
-            );
-        }
-        case 12:
-        {
-            return (uint64_t)syscall_12_stub(
-                id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11]
-            );
-        }
-        case 13:
-        {
-            return (uint64_t)syscall_13_stub(
-                id,
-                args[0],
-                args[1],
-                args[2],
-                args[3],
-                args[4],
-                args[5],
-                args[6],
-                args[7],
-                args[8],
-                args[9],
-                args[10],
-                args[11],
-                args[12]
-            );
-        }
-        default:
-        {
-            panic("too many arguments for windows syscall");
-            break;
-        }
-        }
+        uint64_t  func_addr = reg_read(reg_a0);
+        uint64_t* args      = (uint64_t*)riscvm_getptr(self, reg_read(reg_a1));
+
+        using syscall_fn = uint64_t(__fastcall*)(
+            uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t
+        );
+
+        syscall_fn fn = (syscall_fn)func_addr;
+        return fn(
+            args[0],
+            args[1],
+            args[2],
+            args[3],
+            args[4],
+            args[5],
+            args[6],
+            args[7],
+            args[8],
+            args[9],
+            args[10],
+            args[11],
+            args[12]);
+    }
+    case 20001:
+    {
+        // return PEB
+        return __readgsqword(0x60);
     }
     default:
     {
@@ -1294,7 +1251,7 @@ void riscvm_execute(riscvm_ptr self, Instruction inst)
         }
         return;
     }
-    case 0b1100011: // conditional branch
+    case 0b1100011: // BEQ (conditional branch)
     {
         trace("^^ conditional branch\n");
 
@@ -1396,7 +1353,8 @@ void riscvm_run(riscvm_ptr self)
     self->running = true;
     while (LIKELY(self->running))
     {
-        Instruction inst = (Instruction)riscvm_fetch(self);
+        Instruction inst;
+        inst.bits = riscvm_fetch(self);
 
         unsigned char* p_inst = (unsigned char*)&inst.bits;
         (void)p_inst;
@@ -1415,7 +1373,7 @@ int main(int argc, char** argv)
 #ifdef _DEBUG
     g_trace = argc > 2 && _stricmp(argv[2], "--trace") == 0;
 #endif
-    riscvm_ptr machine = malloc(sizeof(riscvm));
+    riscvm_ptr machine = (riscvm_ptr)malloc(sizeof(riscvm));
     memset(machine, 0, sizeof(riscvm));
     riscvm_loadfile(machine, argv[1]);
     riscvm_run(machine);

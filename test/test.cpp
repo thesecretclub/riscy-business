@@ -1,4 +1,6 @@
 #include "../riscvm_lib2/syscalls.hpp"
+#include "../riscvm_lib2/windows.hpp"
+#include "../riscvm_lib2/ldr.hpp"
 
 struct Blah2
 {
@@ -31,7 +33,7 @@ int get_proc_id()
 {
     PROCESS_BASIC_INFORMATION pbi;
 
-    int32_t status = WIN_SYSCALL(NtQueryInformationProcess, -1, 0, &pbi, sizeof(pbi), 0);
+    int32_t status = WIN_SYSCALL(ZwQueryInformationProcess, -1, 0, &pbi, sizeof(pbi), 0);
     if (status != 0)
         return status;
     return pbi.UniqueProcessId;
@@ -39,7 +41,12 @@ int get_proc_id()
 
 extern "C" int bb()
 {
-    SYSCALL(SYSCALL_PRINTS, "Hello, world!");
-    SYSCALL(SYSCALL_PRINTI, get_proc_id());
+    auto peb = (win::PEB_T*)syscall(e_syscall::get_peb);
+    (void)syscall(e_syscall::print_tag_hex, "peb", peb);
+    auto ntdll = ldr::find_ntdll(peb);
+    (void)syscall(e_syscall::print_tag_hex, "ntdll", ntdll);
+    win::init_syscalls(ntdll);
+    (void)syscall(e_syscall::print_string, "Hello, world!");
+    (void)syscall(e_syscall::print_int, get_proc_id());
     return blah.x + blah2.y;
 }

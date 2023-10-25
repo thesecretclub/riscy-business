@@ -6,3 +6,6 @@
 #else
 #define ALWAYS_INLINE
 #endif
+
+#define ALWAYS_INLINE_CX   [[gnu::always_inline]] constexpr
+#define ALWAYS_INLINE_CXND [[gnu::always_inline, nodiscard]] constexpr
