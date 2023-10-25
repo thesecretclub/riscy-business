@@ -5,6 +5,9 @@
 // ty magic <3
 // https://github.com/JustasMasiulis/lazy_importer/blob/master/include/lazy_importer.hpp
 
+#define CONTAINING_RECORD(address, type, field) (\
+    (type *)((char*)(address) -(unsigned long)(&((type *)0)->field)))
+
 namespace win
 {
 
@@ -198,7 +201,7 @@ namespace win
 {
 namespace detail
 {
-//todo: better hashing algo
+// TODO: better hashing algo
 ALWAYS_INLINE_CXND uint32_t hash(const char* str)
 {
     uint32_t hash = 0x811c9dc5;
@@ -244,24 +247,52 @@ template <class F> ALWAYS_INLINE inline void enum_syscalls(const uintptr_t image
     }
 }
 
+ALWAYS_INLINE inline PEB_T* get_peb()
+{
+    return reinterpret_cast<PEB_T*>(syscall(e_syscall::get_peb));
+}
+
 } // namespace detail
+
+ALWAYS_INLINE inline uintptr_t find_ntdll(win::PEB_T* peb)
+{
+    auto begin = &peb->Ldr->InLoadOrderModuleList;
+    for (auto itr = begin->Flink; itr != begin; itr = itr->Flink)
+    {
+        auto entry = CONTAINING_RECORD(itr, win::LDR_DATA_TABLE_ENTRY_T, InLoadOrderLinks);
+        auto base = (uintptr_t)entry->DllBase;
+        if ((uintptr_t)begin >= base && (uintptr_t)begin < base + entry->SizeOfImage)
+        {
+            return (uintptr_t)entry->DllBase;
+        }
+    }
+    return 0;
+}
+
 } // namespace win
 
 #define DEFINE_SYSCALL(name)  inline win::detail::syscall_holder<win::detail::hash(#name)> _##name##_holder;
-#define INIT_SYSCALL(syscall) _##syscall##_holder.init(name, (uintptr_t)func);
+#define INIT_SYSCALL(syscall) _##syscall##_holder.init(name, func);
 
 DEFINE_SYSCALL(ZwQueryInformationProcess);
+DEFINE_SYSCALL(ZwCreateFile);
+DEFINE_SYSCALL(ZwWriteFile);
+DEFINE_SYSCALL(ZwClose);
 
 namespace win
 {
 
-ALWAYS_INLINE void init_syscalls(uintptr_t image)
+ALWAYS_INLINE inline void init_syscalls()
 {
+    auto image = find_ntdll(win::detail::get_peb());
     detail::enum_syscalls(
         image,
         [&](const char* name, const uintptr_t func)
         {
             INIT_SYSCALL(ZwQueryInformationProcess);
+            INIT_SYSCALL(ZwCreateFile);
+            INIT_SYSCALL(ZwWriteFile);
+            INIT_SYSCALL(ZwClose);
         }
     );
 }
@@ -281,16 +312,11 @@ template <class... Ts> ALWAYS_INLINE inline uint32_t invoke_syscall(uintptr_t fu
     asm volatile("scall" : "+r"(_a0) : "r"(_a1), "r"(syscall_id));
     return _a0;
 }
+
 } // namespace detail
-
-template <class... Ts> ALWAYS_INLINE inline uint32_t syscall(uintptr_t func_addr, Ts... args)
-{
-    return detail::invoke_syscall(func_addr, (uint64_t)(args)...);
-}
-
 } // namespace win
 
 #undef DEFINE_SYSCALL
 #undef INIT_SYSCALL
 
-#define WIN_SYSCALL(name, ...) win::syscall((_##name##_holder).func_address, __VA_ARGS__)
+#define WIN_SYSCALL(name, ...) win::detail::invoke_syscall((_##name##_holder).func_address, __VA_ARGS__)

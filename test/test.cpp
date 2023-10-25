@@ -1,6 +1,5 @@
 #include "../riscvm_lib2/syscalls.hpp"
 #include "../riscvm_lib2/windows.hpp"
-#include "../riscvm_lib2/ldr.hpp"
 
 struct Blah2
 {
@@ -41,11 +40,7 @@ int get_proc_id()
 
 extern "C" int bb()
 {
-    auto peb = (win::PEB_T*)syscall(e_syscall::get_peb);
-    (void)syscall(e_syscall::print_tag_hex, "peb", peb);
-    auto ntdll = ldr::find_ntdll(peb);
-    (void)syscall(e_syscall::print_tag_hex, "ntdll", ntdll);
-    win::init_syscalls(ntdll);
+    win::init_syscalls();
     (void)syscall(e_syscall::print_string, "Hello, world!");
     (void)syscall(e_syscall::print_int, get_proc_id());
     return blah.x + blah2.y;
