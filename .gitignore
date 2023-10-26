@@ -5,3 +5,7 @@ build*/
 *.elf
 *.o
 *.map
+*.bc
+*.ll
+*.exe
+*.dll
