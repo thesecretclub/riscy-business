@@ -1,0 +1,11 @@
+# cmkr
+build*/
+cmake-build*/
+CMakerLists.txt
+CMakeLists.txt.user
+
+# clangd
+.cache/
+
+# macos
+.DS_Store
