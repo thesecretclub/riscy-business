@@ -346,10 +346,13 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
             break;
         }
         }
+
         if (LIKELY(inst.itype.rd != reg_zero))
         {
             reg_write(inst.itype.rd, (uint64_t)val);
         }
+
+        self->pc += 4;
         break;
     }
 
@@ -386,6 +389,8 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
             break;
         }
         }
+
+        self->pc += 4;
         break;
     }
 
@@ -462,10 +467,13 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
             break;
         }
         }
+
         if (LIKELY(inst.itype.rd != reg_zero))
         {
             reg_write(inst.itype.rd, val);
         }
+
+        self->pc += 4;
         break;
     }
 
@@ -503,10 +511,13 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
             break;
         }
         }
+
         if (LIKELY(inst.itype.rd != reg_zero))
         {
             reg_write(inst.itype.rd, val);
         }
+
+        self->pc += 4;
         break;
     }
 
@@ -671,10 +682,13 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
             break;
         }
         }
+
         if (LIKELY(inst.rtype.rd != reg_zero))
         {
             reg_write(inst.rtype.rd, val);
         }
+
+        self->pc += 4;
         break;
     }
 
@@ -682,7 +696,7 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
     {
         int64_t val1 = reg_read(inst.rtype.rs1);
         int64_t val2 = reg_read(inst.rtype.rs2);
-        int64_t val = 0;
+        int64_t val  = 0;
         switch ((inst.rtype.funct7 << 3) | inst.rtype.funct3)
         {
         case 0b000: // ADDW
@@ -785,10 +799,13 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
             break;
         }
         }
+
         if (LIKELY(inst.rtype.rd != reg_zero))
         {
             reg_write(inst.rtype.rd, val);
         }
+
+        self->pc += 4;
         break;
     }
 
@@ -799,6 +816,8 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
         {
             reg_write(inst.utype.rd, imm);
         }
+
+        self->pc += 4;
         break;
     }
 
@@ -809,6 +828,8 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
         {
             reg_write(inst.utype.rd, self->pc + imm);
         }
+
+        self->pc += 4;
         break;
     }
 
@@ -834,8 +855,9 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
         {
             reg_write(inst.ujtype.rd, self->pc + 4);
         }
-        self->pc = self->pc + imm;
-        return;
+
+        self->pc += imm;
+        break;
     }
 
     case rv64_jalr: // ret
@@ -850,14 +872,13 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
             trace("sus link register (ret): %d\n", inst.itype.rs1);
 #endif // HAS_TRACE
 
-        int64_t pc = self->pc + 4;
-        self->pc   = (int64_t)(reg_read(inst.itype.rs1) + inst.itype.imm) & -2;
-
         if (UNLIKELY(inst.itype.rd != reg_zero))
         {
-            reg_write(inst.itype.rd, pc);
+            reg_write(inst.itype.rd, self->pc + 4);
         }
-        return;
+
+        self->pc = (int64_t)(reg_read(inst.itype.rs1) + inst.itype.imm) & -2;
+        break;
     }
 
     case rv64_branch:
@@ -914,10 +935,14 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
             break;
         }
         }
+
         if (cond)
         {
-            self->pc = self->pc + imm;
-            return;
+            self->pc += imm;
+        }
+        else
+        {
+            self->pc += 4;
         }
         break;
     }
@@ -925,6 +950,8 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
     case rv64_fence:
     {
         // no-op on x86
+
+        self->pc += 4;
         break;
     }
 
@@ -950,6 +977,8 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
             break;
         }
         }
+
+        self->pc += 4;
         break;
     }
 
@@ -959,8 +988,6 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
         break;
     }
     }
-
-    self->pc = (self->pc + 4);
 }
 
 void riscvm_run(riscvm_ptr self)
