@@ -4,21 +4,22 @@ LINK_BASE = 0x8000000;
 
 SECTIONS
 {
-	. = LINK_BASE;
-	__base = .;
+    . = LINK_BASE;
+    __base = .;
 
-	.text : ALIGN(16) {
+    .text : ALIGN(16) {
         . = LINK_BASE;
-		*(.text)
+        *(.text)
         *(.text.*)
-	}
+    }
 
-	.data : {
-		*(.rodata)
-		*(.rodata.*)
-		*(.data)
-		*(.data.*)
-	}
+    .data : {
+        *(.rodata)
+        *(.rodata.*)
+        *(.data)
+        *(.data.*)
+        *(.eh_frame)
+    }
 
     .init : {
         __init_array_start = .;
@@ -27,14 +28,14 @@ SECTIONS
     }
 
     .bss : {
-		*(.bss)
-		*(.bss.*)
+        *(.bss)
+        *(.bss.*)
         *(.sbss)
-		*(.sbss.*)
-	}
+        *(.sbss.*)
+    }
 
     .relocs : {
-		. = . + SIZEOF(.bss);
+        . = . + SIZEOF(.bss);
         __relocs_start = .;
     }
 }

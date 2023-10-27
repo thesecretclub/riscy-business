@@ -1,6 +1,5 @@
 @echo off
-set FLAGS=-target riscv64 -march=rv64g -fno-exceptions -mcmodel=medany -Os
-clang.exe %FLAGS% -c crt0.c -o crt0.o
+set FLAGS=-target riscv64 -march=rv64g -fno-exceptions -mcmodel=medany -fshort-wchar -Os
 if not %ERRORLEVEL%==0 exit /b
 clang.exe %FLAGS% -c main.c -o main.o
 if not %ERRORLEVEL%==0 exit /b

@@ -24,7 +24,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 	configure_file(cmake.toml cmake.toml COPYONLY)
 endif()
 
-set(CMAKE_CONFIGURATION_TYPES Release)
+set(CMAKE_CONFIGURATION_TYPES Debug Release)
 
 project(payload
 	LANGUAGES
