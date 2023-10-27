@@ -34,7 +34,7 @@ static int  g_trace_calldepth = 0;
         __debugbreak();      \
     } while (0)
 
-#define log(...) printf(__VA_ARGS__)
+#define log(...)  printf(__VA_ARGS__)
 #define logw(...) wprintf(__VA_ARGS__)
 
 #else
@@ -239,23 +239,26 @@ typedef enum
     reg_t6,
 } RegIndex;
 
-ALWAYS_INLINE static uint32_t riscvm_fetch(riscvm_ptr self);
-ALWAYS_INLINE static int8_t   riscvm_read_int8(riscvm_ptr self, uint64_t addr);
-ALWAYS_INLINE static int16_t  riscvm_read_int16(riscvm_ptr self, uint64_t addr);
-ALWAYS_INLINE static int32_t  riscvm_read_int32(riscvm_ptr self, uint64_t addr);
-ALWAYS_INLINE static int64_t  riscvm_read_int64(riscvm_ptr self, uint64_t addr);
-ALWAYS_INLINE static uint8_t  riscvm_read_uint8(riscvm_ptr self, uint64_t addr);
-ALWAYS_INLINE static uint16_t riscvm_read_uint16(riscvm_ptr self, uint64_t addr);
-ALWAYS_INLINE static uint32_t riscvm_read_uint32(riscvm_ptr self, uint64_t addr);
-ALWAYS_INLINE static void*    riscvm_getptr(riscvm_ptr self, uint64_t addr);
-ALWAYS_INLINE static void     riscvm_write_uint8(riscvm_ptr self, uint64_t addr, uint8_t val);
-ALWAYS_INLINE static void     riscvm_write_uint16(riscvm_ptr self, uint64_t addr, uint16_t val);
-ALWAYS_INLINE static void     riscvm_write_uint32(riscvm_ptr self, uint64_t addr, uint32_t val);
-ALWAYS_INLINE static void     riscvm_write_uint64(riscvm_ptr self, uint64_t addr, uint64_t val);
-ALWAYS_INLINE static uint64_t riscvm_handle_syscall(riscvm_ptr self, uint64_t code);
-ALWAYS_INLINE static void     riscvm_execute(riscvm_ptr self, Instruction inst);
-ALWAYS_INLINE static int64_t  riscvm_shl_int64(int64_t a, int64_t b);
-ALWAYS_INLINE static int64_t  riscvm_shr_int64(int64_t a, int64_t b);
-ALWAYS_INLINE static int64_t  riscvm_asr_int64(int64_t a, int64_t b);
-ALWAYS_INLINE static __int128 riscvm_shr_int128(__int128 a, __int128 b);
-NEVER_INLINE static void      riscvm_run(riscvm_ptr self);
+extern "C"
+{
+    ALWAYS_INLINE static uint32_t riscvm_fetch(riscvm_ptr self);
+    ALWAYS_INLINE static int8_t   riscvm_read_int8(riscvm_ptr self, uint64_t addr);
+    ALWAYS_INLINE static int16_t  riscvm_read_int16(riscvm_ptr self, uint64_t addr);
+    ALWAYS_INLINE static int32_t  riscvm_read_int32(riscvm_ptr self, uint64_t addr);
+    ALWAYS_INLINE static int64_t  riscvm_read_int64(riscvm_ptr self, uint64_t addr);
+    ALWAYS_INLINE static uint8_t  riscvm_read_uint8(riscvm_ptr self, uint64_t addr);
+    ALWAYS_INLINE static uint16_t riscvm_read_uint16(riscvm_ptr self, uint64_t addr);
+    ALWAYS_INLINE static uint32_t riscvm_read_uint32(riscvm_ptr self, uint64_t addr);
+    ALWAYS_INLINE static void*    riscvm_getptr(riscvm_ptr self, uint64_t addr);
+    ALWAYS_INLINE static void     riscvm_write_uint8(riscvm_ptr self, uint64_t addr, uint8_t val);
+    ALWAYS_INLINE static void     riscvm_write_uint16(riscvm_ptr self, uint64_t addr, uint16_t val);
+    ALWAYS_INLINE static void     riscvm_write_uint32(riscvm_ptr self, uint64_t addr, uint32_t val);
+    ALWAYS_INLINE static void     riscvm_write_uint64(riscvm_ptr self, uint64_t addr, uint64_t val);
+    ALWAYS_INLINE static uint64_t riscvm_handle_syscall(riscvm_ptr self, uint64_t code);
+    ALWAYS_INLINE static void     riscvm_execute(riscvm_ptr self, Instruction inst);
+    ALWAYS_INLINE static int64_t  riscvm_shl_int64(int64_t a, int64_t b);
+    ALWAYS_INLINE static int64_t  riscvm_shr_int64(int64_t a, int64_t b);
+    ALWAYS_INLINE static int64_t  riscvm_asr_int64(int64_t a, int64_t b);
+    ALWAYS_INLINE static __int128 riscvm_shr_int128(__int128 a, __int128 b);
+    NEVER_INLINE static void      riscvm_run(riscvm_ptr self);
+}

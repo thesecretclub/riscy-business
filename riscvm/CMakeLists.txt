@@ -29,6 +29,7 @@ project(riscvm)
 # Target: riscvm
 set(riscvm_SOURCES
 	riscvm.cpp
+	riscvm.h
 	cmake.toml
 )
 
@@ -40,6 +41,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${riscvm_SOURCES})
 if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang-cl
 	target_compile_options(riscvm PRIVATE
 		"/clang:-fno-jump-tables"
+		"/clang:-mno-sse"
 	)
 endif()
 

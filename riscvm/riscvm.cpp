@@ -36,150 +36,93 @@ void riscvm_loadfile(riscvm_ptr self, const char* filename)
     self->pc = (int64_t)g_code;
 }
 
-uint32_t riscvm_fetch(riscvm_ptr self)
+ALWAYS_INLINE uint32_t riscvm_fetch(riscvm_ptr self)
 {
     uint32_t data;
     memcpy(&data, (const void*)self->pc, sizeof(data));
     return data;
 }
 
-int8_t riscvm_read_int8(riscvm_ptr self, uint64_t addr)
+ALWAYS_INLINE int8_t riscvm_read_int8(riscvm_ptr self, uint64_t addr)
 {
     int8_t data;
     memcpy(&data, (const void*)addr, sizeof(data));
     return data;
 }
 
-int16_t riscvm_read_int16(riscvm_ptr self, uint64_t addr)
+ALWAYS_INLINE int16_t riscvm_read_int16(riscvm_ptr self, uint64_t addr)
 {
     int16_t data;
     memcpy(&data, (const void*)addr, sizeof(data));
     return data;
 }
 
-int32_t riscvm_read_int32(riscvm_ptr self, uint64_t addr)
+ALWAYS_INLINE int32_t riscvm_read_int32(riscvm_ptr self, uint64_t addr)
 {
     int32_t data;
     memcpy(&data, (const void*)addr, sizeof(data));
     return data;
 }
 
-int64_t riscvm_read_int64(riscvm_ptr self, uint64_t addr)
+ALWAYS_INLINE int64_t riscvm_read_int64(riscvm_ptr self, uint64_t addr)
 {
     int64_t data;
     memcpy(&data, (const void*)addr, sizeof(data));
     return data;
 }
 
-uint8_t riscvm_read_uint8(riscvm_ptr self, uint64_t addr)
+ALWAYS_INLINE uint8_t riscvm_read_uint8(riscvm_ptr self, uint64_t addr)
 {
     uint8_t data;
     memcpy(&data, (const void*)addr, sizeof(data));
     return data;
 }
 
-uint16_t riscvm_read_uint16(riscvm_ptr self, uint64_t addr)
+ALWAYS_INLINE uint16_t riscvm_read_uint16(riscvm_ptr self, uint64_t addr)
 {
     uint16_t data;
     memcpy(&data, (const void*)addr, sizeof(data));
     return data;
 }
 
-uint32_t riscvm_read_uint32(riscvm_ptr self, uint64_t addr)
+ALWAYS_INLINE uint32_t riscvm_read_uint32(riscvm_ptr self, uint64_t addr)
 {
     uint32_t data;
     memcpy(&data, (const void*)addr, sizeof(data));
     return data;
 }
 
-void* riscvm_getptr(riscvm_ptr self, uint64_t addr)
+ALWAYS_INLINE void* riscvm_getptr(riscvm_ptr self, uint64_t addr)
 {
     return (void*)addr;
 }
 
-void riscvm_write_uint8(riscvm_ptr self, uint64_t addr, uint8_t val)
+ALWAYS_INLINE void riscvm_write_uint8(riscvm_ptr self, uint64_t addr, uint8_t val)
 {
     memcpy((void*)addr, &val, sizeof(val));
 }
 
-void riscvm_write_uint16(riscvm_ptr self, uint64_t addr, uint16_t val)
+ALWAYS_INLINE void riscvm_write_uint16(riscvm_ptr self, uint64_t addr, uint16_t val)
 {
     memcpy((void*)addr, &val, sizeof(val));
 }
 
-void riscvm_write_uint32(riscvm_ptr self, uint64_t addr, uint32_t val)
+ALWAYS_INLINE void riscvm_write_uint32(riscvm_ptr self, uint64_t addr, uint32_t val)
 {
     memcpy((void*)addr, &val, sizeof(val));
 }
 
-void riscvm_write_uint64(riscvm_ptr self, uint64_t addr, uint64_t val)
+ALWAYS_INLINE void riscvm_write_uint64(riscvm_ptr self, uint64_t addr, uint64_t val)
 {
     memcpy((void*)addr, &val, sizeof(val));
 }
 
-ALWAYS_INLINE int32_t bit_signer(uint32_t field, uint32_t size)
+ALWAYS_INLINE static int32_t bit_signer(uint32_t field, uint32_t size)
 {
     return (field & (1U << (size - 1))) ? (int32_t)(field | (0xFFFFFFFFU << size)) : (int32_t)field;
 }
 
-// could still use this for a single direct syscall stub
-ALWAYS_INLINE uint32_t syscall_13_stub(
-    uint32_t id,
-    uint64_t _1,
-    uint64_t _2,
-    uint64_t _3,
-    uint64_t _4,
-    uint64_t _5,
-    uint64_t _6,
-    uint64_t _7,
-    uint64_t _8,
-    uint64_t _9,
-    uint64_t _10,
-    uint64_t _11,
-    uint64_t _12,
-    uint64_t _13
-)
-{
-    register uint64_t a1 asm("r10") = _1;
-    register uint64_t a3 asm("r8")  = _3;
-    register uint64_t a4 asm("r9")  = _4;
-
-    void*             unused_output;
-    register uint64_t unused_output2 asm("r11");
-
-    uint32_t status;
-    asm volatile("sub $112, %%rsp\n"
-                 "movq %[a5], 40(%%rsp)\n"
-                 "movq %[a6], 48(%%rsp)\n"
-                 "movq %[a7], 56(%%rsp)\n"
-                 "movq %[a8], 64(%%rsp)\n"
-                 "movq %[a9], 72(%%rsp)\n"
-                 "movq %[a10], 80(%%rsp)\n"
-                 "movq %[a11], 88(%%rsp)\n"
-                 "movq %[a12], 96(%%rsp)\n"
-                 "movq %[a13], 104(%%rsp)\n"
-                 "syscall\n"
-                 "add $112, %%rsp"
-                 : "=a"(status), "=r"(a1), "=d"(_2), "=r"(a3), "=r"(a4), "=c"(unused_output), "=r"(unused_output2)
-                 : "a"(id),
-                   "r"(a1),
-                   "d"(_2),
-                   "r"(a3),
-                   "r"(a4),
-                   [a5] "re"(_5),
-                   [a6] "re"(_6),
-                   [a7] "re"(_7),
-                   [a8] "re"(_8),
-                   [a9] "re"(_9),
-                   [a10] "re"(_10),
-                   [a11] "re"(_11),
-                   [a12] "re"(_12),
-                   [a13] "re"(_13)
-                 : "memory", "cc");
-    return status;
-}
-
-uint64_t riscvm_handle_syscall(riscvm_ptr self, uint64_t code)
+ALWAYS_INLINE uint64_t riscvm_handle_syscall(riscvm_ptr self, uint64_t code)
 {
     trace("syscall %llu\n", code);
     switch (code)
@@ -190,37 +133,14 @@ uint64_t riscvm_handle_syscall(riscvm_ptr self, uint64_t code)
         self->exitcode = reg_read(reg_a0);
         break;
     }
+
+#ifdef _DEBUG
     case 10001:
     {
         panic("aborted!");
         break;
     }
-    case 10006:
-    {
-        void* src  = riscvm_getptr(self, reg_read(reg_a0));
-        void* dest = riscvm_getptr(self, reg_read(reg_a1));
-        void* res  = memcpy(dest, src, (size_t)reg_read(reg_a2));
-        return (uint64_t)res;
-    }
-    case 10007:
-    {
-        void* dest = riscvm_getptr(self, reg_read(reg_a0));
-        void* res  = memset(dest, (int)reg_read(reg_a1), (size_t)reg_read(reg_a2));
-        return (uint64_t)res;
-    }
-    case 10008:
-    {
-        void* src  = riscvm_getptr(self, reg_read(reg_a0));
-        void* dest = riscvm_getptr(self, reg_read(reg_a1));
-        void* res  = memmove(dest, src, (size_t)reg_read(reg_a2));
-        return (uint64_t)res;
-    }
-    case 10009:
-    {
-        void* src1 = riscvm_getptr(self, reg_read(reg_a0));
-        void* src2 = riscvm_getptr(self, reg_read(reg_a1));
-        return (uint64_t)memcmp(src1, src2, (size_t)reg_read(reg_a2));
-    }
+
     case 10100:
     {
         wchar_t* s = (wchar_t*)riscvm_getptr(self, reg_read(reg_a0));
@@ -230,6 +150,7 @@ uint64_t riscvm_handle_syscall(riscvm_ptr self, uint64_t code)
         }
         break;
     }
+
     case 10101:
     {
         char* s = (char*)riscvm_getptr(self, reg_read(reg_a0));
@@ -239,21 +160,26 @@ uint64_t riscvm_handle_syscall(riscvm_ptr self, uint64_t code)
         }
         break;
     }
+
     case 10102:
     {
         log("value: %lli\n", reg_read(reg_a0));
         break;
     }
+
     case 10103:
     {
         log("value: 0x%llx\n", reg_read(reg_a0));
         break;
     }
+
     case 10104:
     {
         log("%s: 0x%llx\n", (char*)reg_read(reg_a0), reg_read(reg_a1));
         break;
     }
+#endif
+
     case 20000:
     {
         uint64_t  func_addr = reg_read(reg_a0);
@@ -277,13 +203,16 @@ uint64_t riscvm_handle_syscall(riscvm_ptr self, uint64_t code)
             args[9],
             args[10],
             args[11],
-            args[12]);
+            args[12]
+        );
     }
+
     case 20001:
     {
         // return PEB
         return __readgsqword(0x60);
     }
+
     default:
     {
         panic("illegal system call %llu (0x%llX)\n", code, code);
@@ -292,7 +221,8 @@ uint64_t riscvm_handle_syscall(riscvm_ptr self, uint64_t code)
     }
     return 0U;
 }
-int64_t riscvm_shl_int64(int64_t a, int64_t b)
+
+ALWAYS_INLINE int64_t riscvm_shl_int64(int64_t a, int64_t b)
 {
     if (LIKELY(b >= 0 && b < 64))
     {
@@ -307,7 +237,8 @@ int64_t riscvm_shl_int64(int64_t a, int64_t b)
         return 0;
     }
 }
-int64_t riscvm_shr_int64(int64_t a, int64_t b)
+
+ALWAYS_INLINE int64_t riscvm_shr_int64(int64_t a, int64_t b)
 {
     if (LIKELY(b >= 0 && b < 64))
     {
@@ -322,7 +253,8 @@ int64_t riscvm_shr_int64(int64_t a, int64_t b)
         return 0;
     }
 }
-int64_t riscvm_asr_int64(int64_t a, int64_t b)
+
+ALWAYS_INLINE int64_t riscvm_asr_int64(int64_t a, int64_t b)
 {
     if (LIKELY(b >= 0 && b < 64))
     {
@@ -341,7 +273,8 @@ int64_t riscvm_asr_int64(int64_t a, int64_t b)
         return 0;
     }
 }
-__int128 riscvm_shr_int128(__int128 a, __int128 b)
+
+ALWAYS_INLINE __int128 riscvm_shr_int128(__int128 a, __int128 b)
 {
     if (LIKELY(b >= 0 && b < 128))
     {
@@ -356,7 +289,8 @@ __int128 riscvm_shr_int128(__int128 a, __int128 b)
         return 0;
     }
 }
-void riscvm_execute(riscvm_ptr self, Instruction inst)
+
+ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
 {
     switch (inst.opcode)
     {
@@ -413,6 +347,7 @@ void riscvm_execute(riscvm_ptr self, Instruction inst)
         }
         break;
     }
+
     case 0b100011: // store memory
     {
         int32_t  imm  = bit_signer((inst.stype.imm7 << 5) | inst.stype.imm5, 12);
@@ -448,6 +383,7 @@ void riscvm_execute(riscvm_ptr self, Instruction inst)
         }
         break;
     }
+
     case 0b0010011: // arithmetic
     {
         int64_t imm = bit_signer(inst.itype.imm, 12);
@@ -527,6 +463,7 @@ void riscvm_execute(riscvm_ptr self, Instruction inst)
         }
         break;
     }
+
     case 0b0011011: // rv64i arithmetic
     {
         int64_t imm = bit_signer(inst.itype.imm, 12);
@@ -567,6 +504,7 @@ void riscvm_execute(riscvm_ptr self, Instruction inst)
         }
         break;
     }
+
     case 0b0110011: // rv32 arithmetic
     {
         int64_t val1 = reg_read(inst.rtype.rs1);
@@ -734,6 +672,7 @@ void riscvm_execute(riscvm_ptr self, Instruction inst)
         }
         break;
     }
+
     case 0b0111011: // rv64 arithmetic
     {
         int64_t val1 = reg_read(inst.rtype.rs1);
@@ -847,6 +786,7 @@ void riscvm_execute(riscvm_ptr self, Instruction inst)
         }
         break;
     }
+
     case 0b0110111: // lui
     {
         int64_t imm = bit_signer(inst.utype.imm, 20) << 12;
@@ -856,6 +796,7 @@ void riscvm_execute(riscvm_ptr self, Instruction inst)
         }
         break;
     }
+
     case 0b0010111: // auipc
     {
         int64_t imm = bit_signer(inst.utype.imm, 20) << 12;
@@ -911,6 +852,7 @@ void riscvm_execute(riscvm_ptr self, Instruction inst)
         }
         return;
     }
+
     case 0b1100011: // BEQ (conditional branch)
     {
         trace("^^ conditional branch\n");
@@ -972,10 +914,12 @@ void riscvm_execute(riscvm_ptr self, Instruction inst)
         }
         break;
     }
+
     case 0b0001111:
     {
         break;
     }
+
     case 0b1110011: // system calls and breakpoints
     {
         switch (inst.itype.imm)
@@ -1000,6 +944,7 @@ void riscvm_execute(riscvm_ptr self, Instruction inst)
         }
         break;
     }
+
     default:
     {
         panic("illegal instruction");
@@ -1008,6 +953,7 @@ void riscvm_execute(riscvm_ptr self, Instruction inst)
     }
     self->pc = (self->pc + 4);
 }
+
 void riscvm_run(riscvm_ptr self)
 {
     self->running = true;
@@ -1023,6 +969,7 @@ void riscvm_run(riscvm_ptr self)
         riscvm_execute(self, inst);
     }
 }
+
 int main(int argc, char** argv)
 {
     if (argc < 2)
