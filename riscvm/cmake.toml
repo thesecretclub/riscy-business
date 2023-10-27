@@ -4,15 +4,14 @@ name = "riscvm"
 
 [options]
 RISCVM_DIRECT_DISPATCH = false
-
-[conditions]
-direct-dispatch = "RISCVM_DIRECT_DISPATCH"
+RISCVM_CODE_ENCRYPTION = false
 
 [target.riscvm]
 type = "executable"
 sources = ["riscvm.cpp"]
 headers = ["riscvm.h"]
 compile-features = ["cxx_std_17"]
-direct-dispatch.compile-definitions = ["DIRECT_DISPATCH"]
+RISCVM_DIRECT_DISPATCH.compile-definitions = ["DIRECT_DISPATCH"]
+RISCVM_CODE_ENCRYPTION.compile-definitions = ["CODE_ENCRYPTION"]
 clang-cl.compile-options = ["/clang:-fno-jump-tables", "/clang:-mno-sse"]
 msvc.link-options = ["/DYNAMICBASE:NO", "/INCREMENTAL:NO"]

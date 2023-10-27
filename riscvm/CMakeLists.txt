@@ -26,6 +26,7 @@ endif()
 
 # Options
 option(RISCVM_DIRECT_DISPATCH "" OFF)
+option(RISCVM_CODE_ENCRYPTION "" OFF)
 
 project(riscvm)
 
@@ -41,9 +42,15 @@ add_executable(riscvm)
 target_sources(riscvm PRIVATE ${riscvm_SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${riscvm_SOURCES})
 
-if(RISCVM_DIRECT_DISPATCH) # direct-dispatch
+if(RISCVM_DIRECT_DISPATCH) # RISCVM_DIRECT_DISPATCH
 	target_compile_definitions(riscvm PRIVATE
 		DIRECT_DISPATCH
+	)
+endif()
+
+if(RISCVM_CODE_ENCRYPTION) # RISCVM_CODE_ENCRYPTION
+	target_compile_definitions(riscvm PRIVATE
+		CODE_ENCRYPTION
 	)
 endif()
 

@@ -36,13 +36,43 @@ void riscvm_loadfile(riscvm_ptr self, const char* filename)
     fclose(fp);
     reg_write(reg_sp, (uint64_t)&g_stack[sizeof(g_stack) - 0x10]);
     self->pc = (int64_t)g_code;
+
+#ifdef CODE_ENCRYPTION
+    self->base = self->pc;
+    // TODO: read this from the code
+    self->key = 0xDEADBEEF;
+#endif // CODE_ENCRYPTION
 }
+
+#ifdef CODE_ENCRYPTION
+// TODO: replace with something with better distribution?
+ALWAYS_INLINE static uint32_t djb2_hash(const uint8_t* data)
+{
+    uint32_t hash = 5381;
+    for (size_t i = 0; i < sizeof(uint32_t); ++i)
+    {
+        hash = ((hash << 5) + hash) + data[i];
+    }
+    return hash;
+}
+
+ALWAYS_INLINE static uint32_t transform(uintptr_t offset, uint32_t key)
+{
+    uint32_t key2 = key + offset;
+    return djb2_hash((const uint8_t*)&key2);
+}
+#endif // CODE_ENCRYPTION
 
 ALWAYS_INLINE static uint32_t riscvm_fetch(riscvm_ptr self)
 {
     uint32_t data;
     memcpy(&data, (const void*)self->pc, sizeof(data));
+
+#ifdef CODE_ENCRYPTION
+    return data ^ transform(self->pc - self->base, self->key);
+#else
     return data;
+#endif // CODE_ENCRYPTION
 }
 
 ALWAYS_INLINE static int8_t riscvm_read_int8(riscvm_ptr self, uint64_t addr)

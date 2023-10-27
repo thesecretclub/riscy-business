@@ -87,6 +87,11 @@ struct riscvm
     int64_t  pc;
     uint64_t regs[32];
     int64_t  exitcode;
+
+#ifdef CODE_ENCRYPTION
+    int64_t  base;
+    uint32_t key;
+#endif // CODE_ENCRYPTION
 };
 typedef riscvm* riscvm_ptr;
 
