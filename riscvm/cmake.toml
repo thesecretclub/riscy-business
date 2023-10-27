@@ -4,6 +4,6 @@ name = "riscvm"
 
 [target.riscvm]
 type = "executable"
-sources = ["riscvm.c"]
+sources = ["riscvm.cpp"]
 clang-cl.compile-options = ["/clang:-fno-jump-tables"]
 msvc.link-options = ["/DYNAMICBASE:NO", "/INCREMENTAL:NO"]

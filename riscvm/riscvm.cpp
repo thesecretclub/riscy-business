@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <intrin.h>
 
 #include "riscvm.h"
 
@@ -250,7 +251,7 @@ uint64_t riscvm_handle_syscall(riscvm_ptr self, uint64_t code)
     }
     case 10104:
     {
-        log("%s: 0x%llx\n", reg_read(reg_a0), reg_read(reg_a1));
+        log("%s: 0x%llx\n", (char*)reg_read(reg_a0), reg_read(reg_a1));
         break;
     }
     case 20000:

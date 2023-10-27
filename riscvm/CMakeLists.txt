@@ -28,7 +28,7 @@ project(riscvm)
 
 # Target: riscvm
 set(riscvm_SOURCES
-	riscvm.c
+	riscvm.cpp
 	cmake.toml
 )
 
