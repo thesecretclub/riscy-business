@@ -292,9 +292,14 @@ ALWAYS_INLINE __int128 riscvm_shr_int128(__int128 a, __int128 b)
 
 ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
 {
+    if (inst.compressed_flags != 0b11)
+    {
+        panic("compressed instructions not supported!");
+    }
+
     switch (inst.opcode)
     {
-    case 0b0000011: // load memory
+    case rv64_load:
     {
         uint64_t addr = reg_read(inst.itype.rs1) + inst.itype.imm;
         int64_t  val  = 0;
@@ -348,7 +353,7 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
         break;
     }
 
-    case 0b100011: // store memory
+    case rv64_store:
     {
         int32_t  imm  = bit_signer((inst.stype.imm7 << 5) | inst.stype.imm5, 12);
         uint64_t addr = reg_read(inst.stype.rs1) + imm;
@@ -384,7 +389,7 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
         break;
     }
 
-    case 0b0010011: // arithmetic
+    case rv64_imm64:
     {
         int64_t imm = bit_signer(inst.itype.imm, 12);
         int64_t val = reg_read(inst.itype.rs1);
@@ -464,7 +469,7 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
         break;
     }
 
-    case 0b0011011: // rv64i arithmetic
+    case rv64_imm32:
     {
         int64_t imm = bit_signer(inst.itype.imm, 12);
         int64_t val = reg_read(inst.itype.rs1);
@@ -505,7 +510,7 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
         break;
     }
 
-    case 0b0110011: // rv32 arithmetic
+    case rv64_op64:
     {
         int64_t val1 = reg_read(inst.rtype.rs1);
         int64_t val2 = reg_read(inst.rtype.rs2);
@@ -673,11 +678,11 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
         break;
     }
 
-    case 0b0111011: // rv64 arithmetic
+    case rv64_op32:
     {
         int64_t val1 = reg_read(inst.rtype.rs1);
         int64_t val2 = reg_read(inst.rtype.rs2);
-        int64_t val;
+        int64_t val = 0;
         switch ((inst.rtype.funct7 << 3) | inst.rtype.funct3)
         {
         case 0b000: // ADDW
@@ -787,7 +792,7 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
         break;
     }
 
-    case 0b0110111: // lui
+    case rv64_lui:
     {
         int64_t imm = bit_signer(inst.utype.imm, 20) << 12;
         if (LIKELY(inst.utype.rd != reg_zero))
@@ -797,7 +802,7 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
         break;
     }
 
-    case 0b0010111: // auipc
+    case rv64_auipc:
     {
         int64_t imm = bit_signer(inst.utype.imm, 20) << 12;
         if (LIKELY(inst.utype.rd != reg_zero))
@@ -806,7 +811,8 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
         }
         break;
     }
-    case 0b1101111: // jal (call)
+
+    case rv64_jal: // call
     {
 #ifdef HAS_TRACE
         if (inst.ujtype.rd == reg_ra)
@@ -831,7 +837,8 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
         self->pc = self->pc + imm;
         return;
     }
-    case 0b1100111: // jalr (ret)
+
+    case rv64_jalr: // ret
     {
 #ifdef HAS_TRACE
         if (inst.itype.rs1 == reg_ra)
@@ -853,7 +860,7 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
         return;
     }
 
-    case 0b1100011: // BEQ (conditional branch)
+    case rv64_branch:
     {
         trace("^^ conditional branch\n");
 
@@ -915,12 +922,13 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
         break;
     }
 
-    case 0b0001111:
+    case rv64_fence:
     {
+        // no-op on x86
         break;
     }
 
-    case 0b1110011: // system calls and breakpoints
+    case rv64_system: // system calls and breakpoints
     {
         switch (inst.itype.imm)
         {
@@ -951,6 +959,7 @@ ALWAYS_INLINE void riscvm_execute(riscvm_ptr self, Instruction inst)
         break;
     }
     }
+
     self->pc = (self->pc + 4);
 }
 

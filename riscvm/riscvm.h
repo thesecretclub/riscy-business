@@ -82,20 +82,22 @@ static int  g_trace_calldepth = 0;
 
 #define reg_write(idx, value) self->regs[idx] = value
 
-typedef struct
+struct riscvm
 {
     bool     running;
     int64_t  pc;
     uint64_t regs[32];
     int64_t  exitcode;
-} riscvm, *riscvm_ptr;
+};
+typedef riscvm* riscvm_ptr;
 
-typedef union
+union Instruction
 {
     struct
     {
-        uint32_t opcode : 7;
-        uint32_t        : 25;
+        uint32_t compressed_flags : 2;
+        uint32_t opcode           : 5;
+        uint32_t                  : 25;
     };
 
     struct
@@ -189,9 +191,11 @@ typedef union
 
     int16_t  chunks16[2];
     uint32_t bits;
-} Instruction;
+};
 
-typedef enum
+static_assert(sizeof(Instruction) == sizeof(uint32_t), "");
+
+enum InstructionType
 {
     insn_rtype  = 0b0110011,
     insn_itype  = 0b0010011,
@@ -200,10 +204,10 @@ typedef enum
     insn_ujtype = 0b1101111,
     insn_sbtype = 0b1100011,
     insn_istype = 0b0000011,
-} InstructionType;
+};
 
 // Reference: https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc
-typedef enum
+enum RegIndex
 {
     reg_zero, // always zero
     reg_ra,   // return address
@@ -237,7 +241,24 @@ typedef enum
     reg_t4,
     reg_t5,
     reg_t6,
-} RegIndex;
+};
+
+enum Opcode
+{
+    rv64_load   = 0b00000,
+    rv64_fence  = 0b00011,
+    rv64_imm64  = 0b00100,
+    rv64_auipc  = 0b00101,
+    rv64_imm32  = 0b00110,
+    rv64_store  = 0b01000,
+    rv64_op64   = 0b01100,
+    rv64_lui    = 0b01101,
+    rv64_op32   = 0b01110,
+    rv64_branch = 0b11000,
+    rv64_jalr   = 0b11001,
+    rv64_jal    = 0b11011,
+    rv64_system = 0b11100,
+};
 
 extern "C"
 {
