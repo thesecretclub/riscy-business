@@ -24,6 +24,9 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 	configure_file(cmake.toml cmake.toml COPYONLY)
 endif()
 
+# Options
+option(RISCVM_DIRECT_DISPATCH "" OFF)
+
 project(riscvm)
 
 # Target: riscvm
@@ -37,6 +40,12 @@ add_executable(riscvm)
 
 target_sources(riscvm PRIVATE ${riscvm_SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${riscvm_SOURCES})
+
+if(RISCVM_DIRECT_DISPATCH) # direct-dispatch
+	target_compile_definitions(riscvm PRIVATE
+		DIRECT_DISPATCH
+	)
+endif()
 
 if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang-cl
 	target_compile_options(riscvm PRIVATE

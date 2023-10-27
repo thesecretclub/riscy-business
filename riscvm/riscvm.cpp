@@ -290,6 +290,90 @@ ALWAYS_INLINE static __int128 riscvm_shr_int128(__int128 a, __int128 b)
     }
 }
 
+#ifdef DIRECT_DISPATCH
+#define HANDLER(op)   handler_##op
+#define FWHANDLER(op) static bool HANDLER(op)(riscvm_ptr self, Instruction inst)
+FWHANDLER(rv64_load);
+FWHANDLER(rv64_fence);
+FWHANDLER(rv64_imm64);
+FWHANDLER(rv64_auipc);
+FWHANDLER(rv64_imm32);
+FWHANDLER(rv64_store);
+FWHANDLER(rv64_op64);
+FWHANDLER(rv64_lui);
+FWHANDLER(rv64_op32);
+FWHANDLER(rv64_branch);
+FWHANDLER(rv64_jalr);
+FWHANDLER(rv64_jal);
+FWHANDLER(rv64_system);
+FWHANDLER(rv64_invalid);
+#undef FWHANDLER
+
+typedef bool (*riscvm_handler_t)(riscvm_ptr, Instruction);
+
+// TODO: can we use constexpr magic to generate this dynamically from the enum?
+static riscvm_handler_t riscvm_handlers[] = {
+    HANDLER(rv64_load),    HANDLER(rv64_invalid), HANDLER(rv64_invalid), HANDLER(rv64_fence),
+    HANDLER(rv64_imm64),   HANDLER(rv64_auipc),   HANDLER(rv64_imm32),   HANDLER(rv64_invalid),
+    HANDLER(rv64_store),   HANDLER(rv64_invalid), HANDLER(rv64_invalid), HANDLER(rv64_invalid),
+    HANDLER(rv64_op64),    HANDLER(rv64_lui),     HANDLER(rv64_op32),    HANDLER(rv64_invalid),
+    HANDLER(rv64_invalid), HANDLER(rv64_invalid), HANDLER(rv64_invalid), HANDLER(rv64_invalid),
+    HANDLER(rv64_invalid), HANDLER(rv64_invalid), HANDLER(rv64_invalid), HANDLER(rv64_invalid),
+    HANDLER(rv64_branch),  HANDLER(rv64_jalr),    HANDLER(rv64_invalid), HANDLER(rv64_jal),
+    HANDLER(rv64_system),  HANDLER(rv64_invalid), HANDLER(rv64_invalid), HANDLER(rv64_invalid),
+};
+
+#ifdef _DEBUG
+static void riscvm_verify_handlers()
+{
+    bool checked[_countof(riscvm_handlers)] = {};
+#define CHECK(op)                               \
+    do                                          \
+    {                                           \
+        if (riscvm_handlers[op] != HANDLER(op)) \
+            panic("invalid handler for " #op);  \
+        checked[op] = true;                     \
+    } while (0)
+    CHECK(rv64_load);
+    CHECK(rv64_fence);
+    CHECK(rv64_imm64);
+    CHECK(rv64_auipc);
+    CHECK(rv64_imm32);
+    CHECK(rv64_store);
+    CHECK(rv64_op64);
+    CHECK(rv64_lui);
+    CHECK(rv64_op32);
+    CHECK(rv64_branch);
+    CHECK(rv64_jalr);
+    CHECK(rv64_jal);
+    CHECK(rv64_system);
+    for (size_t i = 0; i < _countof(checked); i++)
+    {
+        if (!checked[i] && riscvm_handlers[i] != HANDLER(rv64_invalid))
+        {
+            panic("unexpected invalid handler at %zu", i);
+        }
+    }
+#undef CHECK
+}
+#endif // _DEBUG
+
+#define dispatch()                                                                                          \
+    Instruction next;                                                                                       \
+    next.bits = riscvm_fetch(self);                                                                         \
+    if (next.compressed_flags != 0b11)                                                                      \
+    {                                                                                                       \
+        panic("compressed instructions not supported!");                                                    \
+    }                                                                                                       \
+    unsigned char* p_inst = (unsigned char*)&next.bits;                                                     \
+    (void)p_inst;                                                                                           \
+    trace("pc: 0x%llx, inst: %02x %02x %02x %02x\n", self->pc, p_inst[0], p_inst[1], p_inst[2], p_inst[3]); \
+    __attribute__((musttail)) return riscvm_handlers[next.opcode](self, next)
+
+#else
+#define dispatch() return true
+#endif // DIRECT_DISPATCH
+
 ALWAYS_INLINE static bool handler_rv64_load(riscvm_ptr self, Instruction inst)
 {
     uint64_t addr = reg_read(inst.itype.rs1) + inst.itype.imm;
@@ -344,7 +428,7 @@ ALWAYS_INLINE static bool handler_rv64_load(riscvm_ptr self, Instruction inst)
     }
 
     self->pc += 4;
-    return true;
+    dispatch();
 }
 
 ALWAYS_INLINE static bool handler_rv64_store(riscvm_ptr self, Instruction inst)
@@ -382,7 +466,7 @@ ALWAYS_INLINE static bool handler_rv64_store(riscvm_ptr self, Instruction inst)
     }
 
     self->pc += 4;
-    return true;
+    dispatch();
 }
 
 ALWAYS_INLINE static bool handler_rv64_imm64(riscvm_ptr self, Instruction inst)
@@ -465,7 +549,7 @@ ALWAYS_INLINE static bool handler_rv64_imm64(riscvm_ptr self, Instruction inst)
     }
 
     self->pc += 4;
-    return true;
+    dispatch();
 }
 
 ALWAYS_INLINE static bool handler_rv64_imm32(riscvm_ptr self, Instruction inst)
@@ -509,7 +593,7 @@ ALWAYS_INLINE static bool handler_rv64_imm32(riscvm_ptr self, Instruction inst)
     }
 
     self->pc += 4;
-    return true;
+    dispatch();
 }
 
 ALWAYS_INLINE static bool handler_rv64_op64(riscvm_ptr self, Instruction inst)
@@ -680,7 +764,7 @@ ALWAYS_INLINE static bool handler_rv64_op64(riscvm_ptr self, Instruction inst)
     }
 
     self->pc += 4;
-    return true;
+    dispatch();
 }
 
 ALWAYS_INLINE static bool handler_rv64_op32(riscvm_ptr self, Instruction inst)
@@ -797,7 +881,7 @@ ALWAYS_INLINE static bool handler_rv64_op32(riscvm_ptr self, Instruction inst)
     }
 
     self->pc += 4;
-    return true;
+    dispatch();
 }
 
 ALWAYS_INLINE static bool handler_rv64_lui(riscvm_ptr self, Instruction inst)
@@ -809,7 +893,7 @@ ALWAYS_INLINE static bool handler_rv64_lui(riscvm_ptr self, Instruction inst)
     }
 
     self->pc += 4;
-    return true;
+    dispatch();
 }
 
 ALWAYS_INLINE static bool handler_rv64_auipc(riscvm_ptr self, Instruction inst)
@@ -821,7 +905,7 @@ ALWAYS_INLINE static bool handler_rv64_auipc(riscvm_ptr self, Instruction inst)
     }
 
     self->pc += 4;
-    return true;
+    dispatch();
 }
 
 ALWAYS_INLINE static bool handler_rv64_jal(riscvm_ptr self, Instruction inst)
@@ -848,7 +932,7 @@ ALWAYS_INLINE static bool handler_rv64_jal(riscvm_ptr self, Instruction inst)
     }
 
     self->pc += imm;
-    return true;
+    dispatch();
 }
 
 ALWAYS_INLINE static bool handler_rv64_jalr(riscvm_ptr self, Instruction inst)
@@ -869,7 +953,7 @@ ALWAYS_INLINE static bool handler_rv64_jalr(riscvm_ptr self, Instruction inst)
     }
 
     self->pc = (int64_t)(reg_read(inst.itype.rs1) + inst.itype.imm) & -2;
-    return true;
+    dispatch();
 }
 
 ALWAYS_INLINE static bool handler_rv64_branch(riscvm_ptr self, Instruction inst)
@@ -935,7 +1019,7 @@ ALWAYS_INLINE static bool handler_rv64_branch(riscvm_ptr self, Instruction inst)
     {
         self->pc += 4;
     }
-    return true;
+    dispatch();
 }
 
 ALWAYS_INLINE static bool handler_rv64_fence(riscvm_ptr self, Instruction inst)
@@ -943,7 +1027,7 @@ ALWAYS_INLINE static bool handler_rv64_fence(riscvm_ptr self, Instruction inst)
     // no-op on x86
 
     self->pc += 4;
-    return true;
+    dispatch();
 }
 
 ALWAYS_INLINE static bool handler_rv64_system(riscvm_ptr self, Instruction inst)
@@ -972,9 +1056,32 @@ ALWAYS_INLINE static bool handler_rv64_system(riscvm_ptr self, Instruction inst)
     }
 
     self->pc += 4;
-    return true;
+    dispatch();
 }
 
+ALWAYS_INLINE static bool handler_rv64_invalid(riscvm_ptr self, Instruction inst)
+{
+    panic("illegal instruction");
+    return false;
+}
+
+#ifdef DIRECT_DISPATCH
+ALWAYS_INLINE static bool riscvm_execute(riscvm_ptr self, Instruction inst)
+{
+    dispatch();
+}
+
+NEVER_INLINE void riscvm_run(riscvm_ptr self)
+{
+    // Make sure the handlers are what we expect
+#ifdef _DEBUG
+    riscvm_verify_handlers();
+#endif // _DEBUG
+
+    Instruction inst;
+    riscvm_execute(self, inst);
+}
+#else
 ALWAYS_INLINE static bool riscvm_execute(riscvm_ptr self, Instruction inst)
 {
     if (inst.compressed_flags != 0b11)
@@ -1051,8 +1158,7 @@ ALWAYS_INLINE static bool riscvm_execute(riscvm_ptr self, Instruction inst)
 
     default:
     {
-        panic("illegal instruction");
-        return false;
+        return handler_rv64_invalid(self, inst);
     }
     }
 }
@@ -1072,6 +1178,7 @@ NEVER_INLINE void riscvm_run(riscvm_ptr self)
             break;
     }
 }
+#endif
 
 int main(int argc, char** argv)
 {
