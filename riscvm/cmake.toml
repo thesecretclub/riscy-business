@@ -12,6 +12,7 @@ direct-dispatch = "RISCVM_DIRECT_DISPATCH"
 type = "executable"
 sources = ["riscvm.cpp"]
 headers = ["riscvm.h"]
+compile-features = ["cxx_std_17"]
 direct-dispatch.compile-definitions = ["DIRECT_DISPATCH"]
 clang-cl.compile-options = ["/clang:-fno-jump-tables", "/clang:-mno-sse"]
 msvc.link-options = ["/DYNAMICBASE:NO", "/INCREMENTAL:NO"]

@@ -47,6 +47,10 @@ if(RISCVM_DIRECT_DISPATCH) # direct-dispatch
 	)
 endif()
 
+target_compile_features(riscvm PRIVATE
+	cxx_std_17
+)
+
 if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang-cl
 	target_compile_options(riscvm PRIVATE
 		"/clang:-fno-jump-tables"
