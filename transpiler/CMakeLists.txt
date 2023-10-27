@@ -12,7 +12,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 	set(CMKR_ROOT_PROJECT ON)
 
 	# Bootstrap cmkr and automatically regenerate CMakeLists.txt
-	include(cmkr.cmake OPTIONAL RESULT_VARIABLE CMKR_INCLUDE_RESULT)
+	include("cmake/cmkr.cmake" OPTIONAL RESULT_VARIABLE CMKR_INCLUDE_RESULT)
 	if(CMKR_INCLUDE_RESULT)
 		cmkr()
 	endif()
@@ -24,33 +24,35 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 	configure_file(cmake.toml cmake.toml COPYONLY)
 endif()
 
-project(riscvm)
+# Variables
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
-# Target: riscvm
-set(riscvm_SOURCES
-	riscvm.cpp
+project(transpiler)
+
+# Packages
+find_package(LLVM-Wrapper REQUIRED)
+
+# Target: transpiler
+set(transpiler_SOURCES
+	"src/transpiler.cpp"
+	"src/utility.hpp"
 	cmake.toml
 )
 
-add_executable(riscvm)
+add_executable(transpiler)
 
-target_sources(riscvm PRIVATE ${riscvm_SOURCES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${riscvm_SOURCES})
+target_sources(transpiler PRIVATE ${transpiler_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${transpiler_SOURCES})
 
-if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang-cl
-	target_compile_options(riscvm PRIVATE
-		"/clang:-fno-jump-tables"
-	)
-endif()
+target_compile_features(transpiler PRIVATE
+	cxx_std_20
+)
 
-if(MSVC) # msvc
-	target_link_options(riscvm PRIVATE
-		"/DYNAMICBASE:NO"
-		"/INCREMENTAL:NO"
-	)
-endif()
+target_link_libraries(transpiler PRIVATE
+	LLVM-Wrapper
+)
 
 get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
 if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT riscvm)
+	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT transpiler)
 endif()

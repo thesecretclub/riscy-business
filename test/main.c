@@ -19,11 +19,42 @@ __attribute__((noinline)) void lfsr16_obfuscate(char* s, int length, unsigned sh
 int bb();
 int bb2();
 
+uint64_t test_switch(uint64_t n)
+{
+    switch(n)
+    {
+    case 1:
+        return 1234;
+    case 2:
+        return 4567;
+    case 3:
+        return 8901;
+    case 4:
+        return n + n;
+    case 5:
+        return n * 55;
+    case 6:
+        return n + 68;
+    case 7:
+        return 8473;
+    case 8:
+        return 8473 ^ n;
+    case 9:
+        return 6748 & n;
+    case 10:
+        return 948;
+    case 11:
+        return 4827;
+    default:
+        return n & 0x1337;
+    }
+}
+
 __attribute((noinline)) int main()
 {
     int x = bb() + bb2();
     lfsr16_obfuscate(myData, sizeof(myData) - 1, 1337 + x);
-    return 42;
+    return test_switch(x) + 42;
 }
 
 void* functions[] = {

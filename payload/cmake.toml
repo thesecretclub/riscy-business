@@ -1,0 +1,31 @@
+# Reference: https://build-cpp.github.io/cmkr/cmake-toml
+[cmake]
+version = "3.19"
+cmkr-include = "cmake/cmkr.cmake"
+
+[project]
+name = "payload"
+languages = ["CXX"]
+cmake-before = "set(CMAKE_CONFIGURATION_TYPES Debug Release)"
+include-after = ["cmake/riscvm.cmake"]
+
+[template.riscvm]
+type = "executable"
+add-function = "add_riscvm_executable"
+
+[target.payload]
+type = "riscvm"
+sources = [
+	"src/main.cpp",
+	"src/phnt.h",
+]
+link-libraries = ["ntdll.lib"]
+compile-features = ["cxx_std_17"]
+msvc.link-options = [
+	"/INCREMENTAL:NO",
+	"/DEBUG",
+]
+clang.link-options = [
+	"-Xlinker",
+	"/ENTRY:EntryPoint",
+]

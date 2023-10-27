@@ -69,3 +69,19 @@ static __attribute((optnone)) void init()
         (*itr)();
     }
 }
+
+uintptr_t RtlGetCurrentPeb()
+{
+    register uintptr_t a0 asm("a0") = 0;
+    register uintptr_t a7 asm("a7") = 20001;
+    asm volatile("scall" : "+r"(a0) : "r"(a7) : "memory");
+    return a0;
+}
+
+int32_t MessageBoxW(uintptr_t hWnd, const uint16_t* lpText, const uint16_t* lpCaption, uint32_t uType)
+{
+    register uintptr_t a0 asm("a0") = (uintptr_t)lpText;
+    register uintptr_t a7 asm("a7") = 10100;
+    asm volatile("scall" : "+r"(a0) : "r"(a7) : "memory");
+    return a0;
+}

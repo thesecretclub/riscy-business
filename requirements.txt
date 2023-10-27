@@ -1,1 +1,2 @@
+pefile==2023.2.7
 pyelftools==0.30

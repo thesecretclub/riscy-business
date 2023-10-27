@@ -1,0 +1,19 @@
+# Reference: https://build-cpp.github.io/cmkr/cmake-toml
+[cmake]
+version = "3.15"
+cmkr-include = "cmake/cmkr.cmake"
+
+[project]
+name = "transpiler"
+
+[variables]
+CMAKE_MODULE_PATH = "${CMAKE_SOURCE_DIR}/cmake"
+
+[find-package.LLVM-Wrapper]
+
+[target.transpiler]
+type = "executable"
+sources = ["src/transpiler.cpp"]
+headers = ["src/utility.hpp"]
+compile-features = ["cxx_std_20"]
+link-libraries = ["LLVM-Wrapper"]
