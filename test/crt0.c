@@ -36,7 +36,7 @@ extern uint8_t __relocs_start[];
 
 static __attribute((noinline)) void relocs()
 {
-    if (*(uint32_t*)__relocs_start != 'ALER')
+    if (*(uint32_t*)__relocs_start != 'ARAY')
     {
         asm volatile("ebreak");
     }

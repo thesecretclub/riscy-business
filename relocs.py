@@ -129,7 +129,7 @@ def main():
 
     with open(output, "wb") as f:
         f.write(binary_data)
-        f.write(b"RELA")
+        f.write(b"YARA")
         for relocation in dynamic_relocations:
             f.write(bytes(relocation))
         f.write(b"\x00")

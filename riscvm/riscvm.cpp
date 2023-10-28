@@ -37,10 +37,60 @@ void riscvm_loadfile(riscvm_ptr self, const char* filename)
     reg_write(reg_sp, (uint64_t)&g_stack[sizeof(g_stack) - 0x10]);
     self->pc = (int64_t)g_code;
 
+#pragma pack(1)
+    struct Features
+    {
+        uint32_t magic;
+        struct
+        {
+            bool encrypted : 1;
+            bool shuffled  : 1;
+        };
+        uint32_t key;
+    };
+    static_assert(sizeof(Features) == 9, "");
+
+    auto features = (Features*)(g_code + size - sizeof(Features));
+    if (features->magic != 'ETAG')
+    {
+        log("no features in the file (unencrypted payload?)\n");
+#if defined(CODE_ENCRYPTION) || defined(OPCODE_SHUFFLING)
+        exit(EXIT_FAILURE);
+#else
+        return;
+#endif
+    }
+
+#ifdef OPCODE_SHUFFLING
+    if (!features->shuffled)
+    {
+        log("shuffling enabled on the host, disabled in the bytecode");
+        exit(EXIT_FAILURE);
+    }
+#else
+    if (features->shuffled)
+    {
+        log("shuffling disabled on the host, enabled in the bytecode");
+        exit(EXIT_FAILURE);
+    }
+#endif // OPCODE_SHUFFLING
+
+    printf("shuffled: %d\n", features->shuffled);
+
 #ifdef CODE_ENCRYPTION
+    if (!features->encrypted)
+    {
+        log("encryption enabled on the host, disabled in the bytecode");
+        exit(EXIT_FAILURE);
+    }
     self->base = self->pc;
-    // TODO: read this from the code
-    self->key = 0xDEADBEEF;
+    self->key  = features->key;
+#else
+    if (features->encrypted)
+    {
+        log("encryption disabled on the host, enabled in the bytecode");
+        exit(EXIT_FAILURE);
+    }
 #endif // CODE_ENCRYPTION
 }
 
