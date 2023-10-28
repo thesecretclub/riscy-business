@@ -4,8 +4,8 @@ name = "riscvm"
 
 [options]
 RISCVM_DIRECT_DISPATCH = false
-RISCVM_CODE_ENCRYPTION = false
-RISCVM_OPCODE_SHUFFLING = false
+RISCVM_CODE_ENCRYPTION = true
+RISCVM_OPCODE_SHUFFLING = true
 
 [target.riscvm]
 type = "executable"
