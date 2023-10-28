@@ -10,6 +10,7 @@
 #include <intrin.h>
 
 #include "riscvm.h"
+#include "trace.h"
 
 #pragma section(".vmcode", read, write)
 __declspec(align(4096)) uint8_t g_code[0x10000];
@@ -135,31 +136,8 @@ ALWAYS_INLINE static uint32_t riscvm_fetch(riscvm_ptr self)
 #endif // CODE_ENCRYPTION
 }
 
-template <typename T> ALWAYS_INLINE static T riscvm_read(riscvm_ptr self, uint64_t addr)
-{
-    T data;
-    memcpy(&data, (const void*)addr, sizeof(data));
-    return data;
-}
-
-template <typename T> ALWAYS_INLINE static void riscvm_write(riscvm_ptr self, uint64_t addr, T val)
-{
-    memcpy((void*)addr, &val, sizeof(val));
-}
-
-ALWAYS_INLINE static void* riscvm_getptr(riscvm_ptr self, uint64_t addr)
-{
-    return (void*)addr;
-}
-
-ALWAYS_INLINE static int32_t bit_signer(uint32_t field, uint32_t size)
-{
-    return (field & (1U << (size - 1))) ? (int32_t)(field | (0xFFFFFFFFU << size)) : (int32_t)field;
-}
-
 ALWAYS_INLINE static bool riscvm_handle_syscall(riscvm_ptr self, uint64_t code, uint64_t& result)
 {
-    trace("syscall %llu\n", code);
     switch (code)
     {
     case 10000: // exit
@@ -214,7 +192,7 @@ ALWAYS_INLINE static bool riscvm_handle_syscall(riscvm_ptr self, uint64_t code, 
         wchar_t* s = (wchar_t*)riscvm_getptr(self, reg_read(reg_a0));
         if (s != NULL)
         {
-            wprintf(L"print: %ls\n", s);
+            wprintf(L"[syscall::wprint] %ls\n", s);
         }
         break;
     }
@@ -224,26 +202,26 @@ ALWAYS_INLINE static bool riscvm_handle_syscall(riscvm_ptr self, uint64_t code, 
         char* s = (char*)riscvm_getptr(self, reg_read(reg_a0));
         if (s != NULL)
         {
-            printf("print: %s\n", s);
+            printf("[syscall::print] %s\n", s);
         }
         break;
     }
 
     case 10102: // print_int
     {
-        printf("value: %lli\n", reg_read(reg_a0));
+        printf("[syscall::print_int] %lli\n", reg_read(reg_a0));
         break;
     }
 
     case 10103: // print_hex
     {
-        printf("value: 0x%llx\n", reg_read(reg_a0));
+        printf("[syscall::print_hex] 0x%llx\n", reg_read(reg_a0));
         break;
     }
 
     case 10104: // print_tag_hex
     {
-        printf("%s: 0x%llx\n", (char*)reg_read(reg_a0), reg_read(reg_a1));
+        printf("[syscall::print_tag_hex] %s: 0x%llx\n", (char*)reg_read(reg_a0), reg_read(reg_a1));
         break;
     }
 #endif // DEBUG_SYSCALLS
@@ -358,21 +336,6 @@ ALWAYS_INLINE static __int128 riscvm_shr_int128(__int128 a, __int128 b)
     }
 }
 
-#ifdef OPCODE_SHUFFLING
-#define trace_inst(inst)                                                                                    \
-    unsigned char* p_inst = (unsigned char*)&inst.bits;                                                     \
-    (void)p_inst;                                                                                           \
-    uint8_t opcode = inst.opcode;                                                                           \
-    inst.opcode    = riscvm_original_opcode(inst.opcode);                                                   \
-    trace("pc: 0x%llx, inst: %02x %02x %02x %02x\n", self->pc, p_inst[0], p_inst[1], p_inst[2], p_inst[3]); \
-    inst.opcode = opcode
-#else
-#define trace_inst(inst)                                \
-    unsigned char* p_inst = (unsigned char*)&inst.bits; \
-    (void)p_inst;                                       \
-    trace("pc: 0x%llx, inst: %02x %02x %02x %02x\n", self->pc, p_inst[0], p_inst[1], p_inst[2], p_inst[3])
-#endif // OPCODE_SHUFFLING
-
 #ifdef DIRECT_DISPATCH
 #warning Direct dispatch enabled
 #define HANDLER(op)   handler_##op
@@ -420,6 +383,7 @@ static constexpr std::array<riscvm_handler_t, 32> riscvm_handlers = []
     return result;
 }();
 
+#ifdef _DEBUG
 #define dispatch()                                       \
     Instruction next;                                    \
     next.bits = riscvm_fetch(self);                      \
@@ -427,8 +391,19 @@ static constexpr std::array<riscvm_handler_t, 32> riscvm_handlers = []
     {                                                    \
         panic("compressed instructions not supported!"); \
     }                                                    \
-    trace_inst(next);                                    \
+    if (g_trace)                                         \
+        riscvm_trace(self, next);                        \
     __attribute__((musttail)) return riscvm_handlers[next.opcode](self, next)
+#else
+#define dispatch()                                       \
+    Instruction next;                                    \
+    next.bits = riscvm_fetch(self);                      \
+    if (next.compressed_flags != 0b11)                   \
+    {                                                    \
+        panic("compressed instructions not supported!"); \
+    }                                                    \
+    __attribute__((musttail)) return riscvm_handlers[next.opcode](self, next)
+#endif // _DEBUG
 
 #else
 #define dispatch() return true
@@ -442,37 +417,37 @@ ALWAYS_INLINE static bool handler_rv64_load(riscvm_ptr self, Instruction inst)
     {
     case 0b000: // lb
     {
-        val = riscvm_read<int8_t>(self, addr);
+        val = riscvm_read<int8_t>(addr);
         break;
     }
     case 0b001: // lh
     {
-        val = riscvm_read<int16_t>(self, addr);
+        val = riscvm_read<int16_t>(addr);
         break;
     }
     case 0b010: // lw
     {
-        val = riscvm_read<int32_t>(self, addr);
+        val = riscvm_read<int32_t>(addr);
         break;
     }
     case 0b011: // ld
     {
-        val = riscvm_read<int64_t>(self, addr);
+        val = riscvm_read<int64_t>(addr);
         break;
     }
     case 0b100: // lbu
     {
-        val = riscvm_read<uint8_t>(self, addr);
+        val = riscvm_read<uint8_t>(addr);
         break;
     }
     case 0b101: // lhu
     {
-        val = riscvm_read<uint16_t>(self, addr);
+        val = riscvm_read<uint16_t>(addr);
         break;
     }
     case 0b110: // lwu
     {
-        val = riscvm_read<uint32_t>(self, addr);
+        val = riscvm_read<uint32_t>(addr);
         break;
     }
     default:
@@ -500,22 +475,22 @@ ALWAYS_INLINE static bool handler_rv64_store(riscvm_ptr self, Instruction inst)
     {
     case 0b00:
     {
-        riscvm_write<uint8_t>(self, addr, (uint8_t)val);
+        riscvm_write<uint8_t>(addr, (uint8_t)val);
         break;
     }
     case 0b01:
     {
-        riscvm_write<uint16_t>(self, addr, (uint16_t)val);
+        riscvm_write<uint16_t>(addr, (uint16_t)val);
         break;
     }
     case 0b10:
     {
-        riscvm_write<uint32_t>(self, addr, (uint32_t)val);
+        riscvm_write<uint32_t>(addr, (uint32_t)val);
         break;
     }
     case 0b11:
     {
-        riscvm_write<uint64_t>(self, addr, val);
+        riscvm_write<uint64_t>(addr, val);
         break;
     }
     default:
@@ -970,16 +945,6 @@ ALWAYS_INLINE static bool handler_rv64_auipc(riscvm_ptr self, Instruction inst)
 
 ALWAYS_INLINE static bool handler_rv64_jal(riscvm_ptr self, Instruction inst)
 {
-#ifdef HAS_TRACE
-    if (inst.ujtype.rd == reg_ra)
-    {
-        trace("^^ call\n");
-        g_trace_calldepth++;
-    }
-    else if (inst.ujtype.rd != reg_zero)
-        trace("sus link register (jal): %d\n", inst.ujtype.rd);
-#endif // HAS_TRACE
-
     int64_t imm = bit_signer(
         (inst.ujtype.imm20 << 20) | (inst.ujtype.imm1 << 1) | (inst.ujtype.imm11 << 11)
             | (inst.ujtype.imm12 << 12),
@@ -997,16 +962,6 @@ ALWAYS_INLINE static bool handler_rv64_jal(riscvm_ptr self, Instruction inst)
 
 ALWAYS_INLINE static bool handler_rv64_jalr(riscvm_ptr self, Instruction inst)
 {
-#ifdef HAS_TRACE
-    if (inst.itype.rs1 == reg_ra)
-    {
-        trace("^^ return\n");
-        g_trace_calldepth--;
-    }
-    else
-        trace("sus link register (ret): %d\n", inst.itype.rs1);
-#endif // HAS_TRACE
-
     if (UNLIKELY(inst.itype.rd != reg_zero))
     {
         reg_write(inst.itype.rd, self->pc + 4);
@@ -1018,8 +973,6 @@ ALWAYS_INLINE static bool handler_rv64_jalr(riscvm_ptr self, Instruction inst)
 
 ALWAYS_INLINE static bool handler_rv64_branch(riscvm_ptr self, Instruction inst)
 {
-    trace("^^ conditional branch\n");
-
     int32_t imm = (inst.sbtype.imm_12 << 12) |  // Bit 31 -> Position 12
                   (inst.sbtype.imm_5_10 << 5) | // Bits 30-25 -> Positions 10-5
                   (inst.sbtype.imm_1_4 << 1) |  // Bits 11-8 -> Positions 4-1
@@ -1225,8 +1178,12 @@ NEVER_INLINE void riscvm_run(riscvm_ptr self)
         Instruction inst;
         inst.bits = riscvm_fetch(self);
 
-        trace_inst(inst);
-
+#ifdef _DEBUG
+        if (g_trace)
+        {
+            riscvm_trace(self, inst);
+        }
+#endif
         if (!riscvm_execute(self, inst))
             break;
     }

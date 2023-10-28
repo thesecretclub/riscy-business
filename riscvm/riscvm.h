@@ -7,25 +7,11 @@
 
 #define HAS_TRACE
 static bool g_trace           = false;
-static int  g_trace_calldepth = 0;
 
 #define ALWAYS_INLINE
 #define NEVER_INLINE
 #define LIKELY(x)   (x)
 #define UNLIKELY(x) (x)
-
-#define trace(...)                                      \
-    do                                                  \
-    {                                                   \
-        if (g_trace)                                    \
-        {                                               \
-            for (int i = 0; i < g_trace_calldepth; i++) \
-            {                                           \
-                printf("  ");                           \
-            }                                           \
-            printf("[trace] " __VA_ARGS__);             \
-        }                                               \
-    } while (0)
 
 #define panic(...)           \
     do                       \
@@ -38,8 +24,6 @@ static int  g_trace_calldepth = 0;
 #define logw(...) wprintf(__VA_ARGS__)
 
 #else
-
-#define trace(...)
 
 #define log(...)
 #define logw(...)
@@ -269,3 +253,25 @@ enum Opcode
     rv64_invalid = 0b11111,
 };
 #endif // OPCODE_SHUFFLING
+
+template <typename T> ALWAYS_INLINE static T riscvm_read(uint64_t addr)
+{
+    T data;
+    memcpy(&data, (const void*)addr, sizeof(data));
+    return data;
+}
+
+template <typename T> ALWAYS_INLINE static void riscvm_write(uint64_t addr, T val)
+{
+    memcpy((void*)addr, &val, sizeof(val));
+}
+
+ALWAYS_INLINE static void* riscvm_getptr(riscvm_ptr self, uint64_t addr)
+{
+    return (void*)addr;
+}
+
+ALWAYS_INLINE static int32_t bit_signer(uint32_t field, uint32_t size)
+{
+    return (field & (1U << (size - 1))) ? (int32_t)(field | (0xFFFFFFFFU << size)) : (int32_t)field;
+}
