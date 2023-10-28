@@ -33,6 +33,17 @@ project(payload
 
 include("cmake/riscvm.cmake")
 
+# Target: riscvm-crt0
+set(riscvm-crt0_SOURCES
+	"src/riscvm-crt0.cpp"
+	cmake.toml
+)
+
+add_library(riscvm-crt0 SHARED)
+
+target_sources(riscvm-crt0 PRIVATE ${riscvm-crt0_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${riscvm-crt0_SOURCES})
+
 # Target: payload
 set(payload_SOURCES
 	"src/main.cpp"
@@ -50,6 +61,7 @@ target_compile_features(payload PRIVATE
 )
 
 target_link_libraries(payload PRIVATE
+	riscvm-crt0
 	ntdll.lib
 )
 

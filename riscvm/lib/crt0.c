@@ -70,7 +70,16 @@ static __attribute((optnone)) void init()
     }
 }
 
-uintptr_t RtlGetCurrentPeb()
+uintptr_t riscvm_host_call(uintptr_t address, uintptr_t args[13])
+{
+    register uintptr_t a0 asm("a0") = address;
+    register uintptr_t a1 asm("a1") = (uintptr_t)&args[0];
+    register uintptr_t a7 asm("a7") = 20000;
+    asm volatile("scall" : "+r"(a0) : "r"(a1), "r"(a7));
+    return a0;
+}
+
+uintptr_t riscvm_get_peb()
 {
     register uintptr_t a0 asm("a0") = 0;
     register uintptr_t a7 asm("a7") = 20001;
@@ -78,6 +87,7 @@ uintptr_t RtlGetCurrentPeb()
     return a0;
 }
 
+// TODO: remove this
 int32_t MessageBoxW(uintptr_t hWnd, const uint16_t* lpText, const uint16_t* lpCaption, uint32_t uType)
 {
     register uintptr_t a0 asm("a0") = (uintptr_t)lpText;

@@ -19,3 +19,8 @@ RISCVM_OPCODE_SHUFFLING.compile-definitions = ["OPCODE_SHUFFLING"]
 RISCVM_DEBUG_SYSCALLS.compile-definitions = ["DEBUG_SYSCALLS"]
 clang-cl.compile-options = ["/clang:-fno-jump-tables", "/clang:-mno-sse"]
 msvc.link-options = ["/DYNAMICBASE:NO", "/INCREMENTAL:NO"]
+
+# Only for IDE purposes, not actually built here
+[target.riscvm-crt0]
+type = "custom"
+sources = ["lib/crt0.c"]

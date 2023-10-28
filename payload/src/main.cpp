@@ -1,5 +1,13 @@
 #include "phnt.h"
 
+#define RISCVM_SYSCALL extern "C" __declspec(dllimport)
+
+RISCVM_SYSCALL uintptr_t riscvm_host_call(uintptr_t address, uintptr_t args[13]);
+RISCVM_SYSCALL uintptr_t riscvm_get_peb();
+
+#undef NtCurrentPeb
+#define NtCurrentPeb() (PPEB) riscvm_get_peb()
+
 static LDR_DATA_TABLE_ENTRY* FindNtdll(PEB* peb)
 {
     auto ldrLock = (ULONG_PTR)peb->LoaderLock;
@@ -18,7 +26,7 @@ static LDR_DATA_TABLE_ENTRY* FindNtdll(PEB* peb)
 
 int main(int argc, char** argv)
 {
-    auto ntdll = FindNtdll(RtlGetCurrentPeb());
+    auto ntdll = FindNtdll(NtCurrentPeb());
     MessageBoxW(0, ntdll->FullDllName.Buffer, L"ntdll", MB_SYSTEMMODAL);
     return 0;
 }

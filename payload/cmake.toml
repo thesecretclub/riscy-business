@@ -13,13 +13,21 @@ include-after = ["cmake/riscvm.cmake"]
 type = "executable"
 add-function = "add_riscvm_executable"
 
+# Windows implementation of the riscvm syscalls (for debugging only)
+[target.riscvm-crt0]
+type = "shared"
+sources = ["src/riscvm-crt0.cpp"]
+
 [target.payload]
 type = "riscvm"
 sources = [
 	"src/main.cpp",
 	"src/phnt.h",
 ]
-link-libraries = ["ntdll.lib"]
+link-libraries = [
+    "riscvm-crt0",
+    "ntdll.lib",
+]
 compile-features = ["cxx_std_17"]
 msvc.link-options = [
 	"/INCREMENTAL:NO",
