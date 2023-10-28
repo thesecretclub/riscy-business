@@ -75,8 +75,6 @@ void riscvm_loadfile(riscvm_ptr self, const char* filename)
     }
 #endif // OPCODE_SHUFFLING
 
-    printf("shuffled: %d\n", features->shuffled);
-
 #ifdef CODE_ENCRYPTION
     if (!features->encrypted)
     {
