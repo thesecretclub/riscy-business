@@ -28,10 +28,10 @@ message(STATUS "Found lld: ${LLD_EXECUTABLE}")
 find_program(OBJCOPY_EXECUTABLE llvm-objcopy.exe PATHS "${LLVM_DIR}" NO_DEFAULT_PATH REQUIRED)
 message(STATUS "Found llvm-objcopy: ${OBJCOPY_EXECUTABLE}")
 
-set(SCRIPT_DIR "${CMAKE_CURRENT_LIST_DIR}/../..")
+set(RISCVM_DIR "${CMAKE_CURRENT_LIST_DIR}/../../riscvm" CACHE PATH "Path to the riscvm directory")
 
 message(STATUS "Compiling RV64 CRT...")
-set(CRT0_SRC "${SCRIPT_DIR}/riscvm/lib/crt0.c")
+set(CRT0_SRC "${RISCVM_DIR}/lib/crt0.c")
 set(CRT0_OBJ "${CMAKE_CURRENT_BINARY_DIR}/crt0.o")
 configure_file("${CRT0_SRC}" crt0.c COPYONLY)
 set(RV64_FLAGS -target riscv64 -march=rv64g -fno-exceptions -mcmodel=medany -fshort-wchar -Os)
@@ -43,7 +43,7 @@ execute_process(
 )
 
 # TODO: download the transpiler
-set(TRANSPILER "${SCRIPT_DIR}/transpiler/build/RelWithDebInfo/transpiler.exe")
+set(TRANSPILER "${RISCVM_DIR}/../transpiler/build/RelWithDebInfo/transpiler.exe" CACHE FILEPATH "Path to the transpiler binary")
 
 # TODO: only create venv if it doesn't exist
 
@@ -66,7 +66,7 @@ find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
 message(STATUS "Installing dependencies...")
 execute_process(
-    COMMAND "${Python3_EXECUTABLE}" -m pip install -r "${SCRIPT_DIR}/requirements.txt" --disable-pip-version-check
+    COMMAND "${Python3_EXECUTABLE}" -m pip install -r "${RISCVM_DIR}/requirements.txt" --disable-pip-version-check
     ECHO_OUTPUT_VARIABLE
     ECHO_ERROR_VARIABLE
     COMMAND_ERROR_IS_FATAL ANY
@@ -79,13 +79,13 @@ function(add_riscvm_executable tgt)
         POST_BUILD
         USES_TERMINAL
         COMMENT "Extracting and transpiling bitcode..."
-        COMMAND "${Python3_EXECUTABLE}" "${SCRIPT_DIR}/extract-bc.py" "$<TARGET_FILE:${tgt}>" -o "${BC_BASE}.bc"
+        COMMAND "${Python3_EXECUTABLE}" "${RISCVM_DIR}/extract-bc.py" "$<TARGET_FILE:${tgt}>" -o "${BC_BASE}.bc"
         COMMAND "${TRANSPILER}" -input "${BC_BASE}.bc" -output "${BC_BASE}.rv64.bc"
         COMMAND "${CLANG_EXECUTABLE}" ${RV64_FLAGS} -c "${BC_BASE}.rv64.bc" -o "${BC_BASE}.rv64.o"
-        COMMAND "${LLD_EXECUTABLE}" -o "${BC_BASE}.elf" --oformat=elf -emit-relocs -T "${SCRIPT_DIR}/riscvm/lib/linker.ld" "--Map=${BC_BASE}.map" "${CRT0_OBJ}" "${BC_BASE}.rv64.o"
+        COMMAND "${LLD_EXECUTABLE}" -o "${BC_BASE}.elf" --oformat=elf -emit-relocs -T "${RISCVM_DIR}/lib/linker.ld" "--Map=${BC_BASE}.map" "${CRT0_OBJ}" "${BC_BASE}.rv64.o"
         COMMAND "${OBJCOPY_EXECUTABLE}" -O binary "${BC_BASE}.elf" "${BC_BASE}.pre.bin"
-        COMMAND "${Python3_EXECUTABLE}" "${SCRIPT_DIR}/relocs.py" "${BC_BASE}.elf" --binary "${BC_BASE}.pre.bin" --output "${BC_BASE}.bin"
-        COMMAND "${Python3_EXECUTABLE}" "${SCRIPT_DIR}/encrypt.py" --encrypt --shuffle --map "${BC_BASE}.map" --shuffle-map "${SCRIPT_DIR}/riscvm/shuffled_opcodes.json" --output "${BC_BASE}.enc.bin" "${BC_BASE}.bin"
+        COMMAND "${Python3_EXECUTABLE}" "${RISCVM_DIR}/relocs.py" "${BC_BASE}.elf" --binary "${BC_BASE}.pre.bin" --output "${BC_BASE}.bin"
+        COMMAND "${Python3_EXECUTABLE}" "${RISCVM_DIR}/encrypt.py" --encrypt --shuffle --map "${BC_BASE}.map" --shuffle-map "${RISCVM_DIR}/shuffled_opcodes.json" --output "${BC_BASE}.enc.bin" "${BC_BASE}.bin"
         VERBATIM
     )
 endfunction()

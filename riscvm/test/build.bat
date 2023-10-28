@@ -15,8 +15,8 @@ if not %ERRORLEVEL%==0 exit /b
 llvm-objcopy -O binary main.elf main.pre.bin
 if not %ERRORLEVEL%==0 exit /b
 echo Handling relocations...
-python ..\..\relocs.py main.elf --binary main.pre.bin --output main.bin
+python ..\relocs.py main.elf --binary main.pre.bin --output main.bin
 if not %ERRORLEVEL%==0 exit /b
 echo Encrypting binary...
-python ..\..\encrypt.py --encrypt --shuffle --map main.map --shuffle-map ..\shuffled_opcodes.json main.bin --output main.enc.bin
+python ..\encrypt.py --encrypt --shuffle --map main.map --shuffle-map ..\shuffled_opcodes.json main.bin --output main.enc.bin
 if not %ERRORLEVEL%==0 exit /b
