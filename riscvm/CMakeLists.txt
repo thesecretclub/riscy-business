@@ -26,8 +26,8 @@ endif()
 
 # Options
 option(RISCVM_DIRECT_DISPATCH "" OFF)
-option(RISCVM_CODE_ENCRYPTION "" OFF)
-option(RISCVM_OPCODE_SHUFFLING "" OFF)
+option(RISCVM_CODE_ENCRYPTION "" ON)
+option(RISCVM_OPCODE_SHUFFLING "" ON)
 
 project(riscvm)
 

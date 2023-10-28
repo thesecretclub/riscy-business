@@ -85,6 +85,7 @@ function(add_riscvm_executable tgt)
         COMMAND "${LLD_EXECUTABLE}" -o "${BC_BASE}.elf" --oformat=elf -emit-relocs -T "${SCRIPT_DIR}/test/linker.ld" "--Map=${BC_BASE}.map" "${CRT0_OBJ}" "${BC_BASE}.rv64.o"
         COMMAND "${OBJCOPY_EXECUTABLE}" -O binary "${BC_BASE}.elf" "${BC_BASE}.pre.bin"
         COMMAND "${Python3_EXECUTABLE}" "${SCRIPT_DIR}/relocs.py" "${BC_BASE}.elf" --binary "${BC_BASE}.pre.bin" --output "${BC_BASE}.bin"
+        COMMAND "${Python3_EXECUTABLE}" "${SCRIPT_DIR}/encrypt.py" --encrypt --shuffle --map "${BC_BASE}.map" --shuffle-map "${SCRIPT_DIR}/riscvm/shuffled_opcodes.json" --output "${BC_BASE}.enc.bin" "${BC_BASE}.bin"
         VERBATIM
     )
 endfunction()
