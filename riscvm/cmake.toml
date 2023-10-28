@@ -11,7 +11,7 @@ RISCVM_DEBUG_SYSCALLS = true
 [target.riscvm]
 type = "executable"
 sources = ["riscvm.cpp"]
-headers = ["riscvm.h", "shuffled_opcodes.h"]
+headers = ["riscvm.h", "shuffled_opcodes.h", "trace.h"]
 compile-features = ["cxx_std_17"]
 RISCVM_DIRECT_DISPATCH.compile-definitions = ["DIRECT_DISPATCH"]
 RISCVM_CODE_ENCRYPTION.compile-definitions = ["CODE_ENCRYPTION"]
