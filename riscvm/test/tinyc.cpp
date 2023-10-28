@@ -1,4 +1,4 @@
-#include "../riscvm_lib2/syscalls.hpp"
+#include "../lib/syscalls.hpp"
 
 extern "C" void* memset(void* vdest, int ch, uint64_t size)
 {
