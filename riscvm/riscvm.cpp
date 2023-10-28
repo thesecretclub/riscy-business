@@ -124,78 +124,21 @@ ALWAYS_INLINE static uint32_t riscvm_fetch(riscvm_ptr self)
 #endif // CODE_ENCRYPTION
 }
 
-ALWAYS_INLINE static int8_t riscvm_read_int8(riscvm_ptr self, uint64_t addr)
+template <typename T> ALWAYS_INLINE static T riscvm_read(riscvm_ptr self, uint64_t addr)
 {
-    int8_t data;
+    T data;
     memcpy(&data, (const void*)addr, sizeof(data));
     return data;
 }
 
-ALWAYS_INLINE static int16_t riscvm_read_int16(riscvm_ptr self, uint64_t addr)
+template <typename T> ALWAYS_INLINE static void riscvm_write(riscvm_ptr self, uint64_t addr, T val)
 {
-    int16_t data;
-    memcpy(&data, (const void*)addr, sizeof(data));
-    return data;
-}
-
-ALWAYS_INLINE static int32_t riscvm_read_int32(riscvm_ptr self, uint64_t addr)
-{
-    int32_t data;
-    memcpy(&data, (const void*)addr, sizeof(data));
-    return data;
-}
-
-ALWAYS_INLINE static int64_t riscvm_read_int64(riscvm_ptr self, uint64_t addr)
-{
-    int64_t data;
-    memcpy(&data, (const void*)addr, sizeof(data));
-    return data;
-}
-
-ALWAYS_INLINE static uint8_t riscvm_read_uint8(riscvm_ptr self, uint64_t addr)
-{
-    uint8_t data;
-    memcpy(&data, (const void*)addr, sizeof(data));
-    return data;
-}
-
-ALWAYS_INLINE static uint16_t riscvm_read_uint16(riscvm_ptr self, uint64_t addr)
-{
-    uint16_t data;
-    memcpy(&data, (const void*)addr, sizeof(data));
-    return data;
-}
-
-ALWAYS_INLINE static uint32_t riscvm_read_uint32(riscvm_ptr self, uint64_t addr)
-{
-    uint32_t data;
-    memcpy(&data, (const void*)addr, sizeof(data));
-    return data;
+    memcpy((void*)addr, &val, sizeof(val));
 }
 
 ALWAYS_INLINE static void* riscvm_getptr(riscvm_ptr self, uint64_t addr)
 {
     return (void*)addr;
-}
-
-ALWAYS_INLINE static void riscvm_write_uint8(riscvm_ptr self, uint64_t addr, uint8_t val)
-{
-    memcpy((void*)addr, &val, sizeof(val));
-}
-
-ALWAYS_INLINE static void riscvm_write_uint16(riscvm_ptr self, uint64_t addr, uint16_t val)
-{
-    memcpy((void*)addr, &val, sizeof(val));
-}
-
-ALWAYS_INLINE static void riscvm_write_uint32(riscvm_ptr self, uint64_t addr, uint32_t val)
-{
-    memcpy((void*)addr, &val, sizeof(val));
-}
-
-ALWAYS_INLINE static void riscvm_write_uint64(riscvm_ptr self, uint64_t addr, uint64_t val)
-{
-    memcpy((void*)addr, &val, sizeof(val));
 }
 
 ALWAYS_INLINE static int32_t bit_signer(uint32_t field, uint32_t size)
@@ -488,37 +431,37 @@ ALWAYS_INLINE static bool handler_rv64_load(riscvm_ptr self, Instruction inst)
     {
     case 0b000: // lb
     {
-        val = riscvm_read_int8(self, addr);
+        val = riscvm_read<int8_t>(self, addr);
         break;
     }
     case 0b001: // lh
     {
-        val = riscvm_read_int16(self, addr);
+        val = riscvm_read<int16_t>(self, addr);
         break;
     }
     case 0b010: // lw
     {
-        val = riscvm_read_int32(self, addr);
+        val = riscvm_read<int32_t>(self, addr);
         break;
     }
     case 0b011: // ld
     {
-        val = riscvm_read_int64(self, addr);
+        val = riscvm_read<int64_t>(self, addr);
         break;
     }
     case 0b100: // lbu
     {
-        val = riscvm_read_uint8(self, addr);
+        val = riscvm_read<uint8_t>(self, addr);
         break;
     }
     case 0b101: // lhu
     {
-        val = riscvm_read_uint16(self, addr);
+        val = riscvm_read<uint16_t>(self, addr);
         break;
     }
     case 0b110: // lwu
     {
-        val = riscvm_read_uint32(self, addr);
+        val = riscvm_read<uint32_t>(self, addr);
         break;
     }
     default:
@@ -546,22 +489,22 @@ ALWAYS_INLINE static bool handler_rv64_store(riscvm_ptr self, Instruction inst)
     {
     case 0b00:
     {
-        riscvm_write_uint8(self, addr, (uint8_t)val);
+        riscvm_write<uint8_t>(self, addr, (uint8_t)val);
         break;
     }
     case 0b01:
     {
-        riscvm_write_uint16(self, addr, (uint16_t)val);
+        riscvm_write<uint16_t>(self, addr, (uint16_t)val);
         break;
     }
     case 0b10:
     {
-        riscvm_write_uint32(self, addr, (uint32_t)val);
+        riscvm_write<uint32_t>(self, addr, (uint32_t)val);
         break;
     }
     case 0b11:
     {
-        riscvm_write_uint64(self, addr, val);
+        riscvm_write<uint64_t>(self, addr, val);
         break;
     }
     default:
