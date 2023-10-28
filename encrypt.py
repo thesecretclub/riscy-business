@@ -161,6 +161,29 @@ def main():
     for function in functions:
         process_function(encrypt, binary, function, key, shuffle_map)
 
+    # Walk and verify the relocations
+    rela_offset = binary.rfind(b"RELA")
+    if rela_offset == -1:
+        print("Could not find RELA section")
+        sys.exit(1)
+    rela_offset += 4
+    while binary[rela_offset] != 0:
+        rela = binary[rela_offset:rela_offset + 13]
+        assert len(rela) == 12
+        type, offset, addend = struct.unpack("<BIQ", rela)
+        print(f"Relocation type {type} at offset {offset} with addend {addend}")
+        rela_offset += 12
+    assert rela_offset + 1 == len(binary), "Incorrect relocation format"
+
+    # Append the feature section
+    features = 0
+    if encrypt:
+        features |= 1
+    if shuffle:
+        features |= 2
+    binary += b"FEAT"
+    binary += struct.pack("<BI", features, key)
+
     # Write the encrypted binary
     with open(output, "wb") as f:
         f.write(binary)
