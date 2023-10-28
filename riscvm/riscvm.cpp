@@ -260,7 +260,7 @@ ALWAYS_INLINE static bool riscvm_handle_syscall(riscvm_ptr self, uint64_t code, 
         wchar_t* s = (wchar_t*)riscvm_getptr(self, reg_read(reg_a0));
         if (s != NULL)
         {
-            logw(L"print: %ls\n", s);
+            wprintf(L"print: %ls\n", s);
         }
         break;
     }
@@ -270,26 +270,26 @@ ALWAYS_INLINE static bool riscvm_handle_syscall(riscvm_ptr self, uint64_t code, 
         char* s = (char*)riscvm_getptr(self, reg_read(reg_a0));
         if (s != NULL)
         {
-            log("print: %s\n", s);
+            printf("print: %s\n", s);
         }
         break;
     }
 
     case 10102: // print_int
     {
-        log("value: %lli\n", reg_read(reg_a0));
+        printf("value: %lli\n", reg_read(reg_a0));
         break;
     }
 
     case 10103: // print_hex
     {
-        log("value: 0x%llx\n", reg_read(reg_a0));
+        printf("value: 0x%llx\n", reg_read(reg_a0));
         break;
     }
 
     case 10104: // print_tag_hex
     {
-        log("%s: 0x%llx\n", (char*)reg_read(reg_a0), reg_read(reg_a1));
+        printf("%s: 0x%llx\n", (char*)reg_read(reg_a0), reg_read(reg_a1));
         break;
     }
 #endif // DEBUG_SYSCALLS
