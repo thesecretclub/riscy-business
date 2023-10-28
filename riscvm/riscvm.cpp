@@ -94,21 +94,33 @@ void riscvm_loadfile(riscvm_ptr self, const char* filename)
 
 #ifdef CODE_ENCRYPTION
 #warning Code encryption enabled
-// TODO: replace with something with better distribution?
-ALWAYS_INLINE static uint32_t djb2_hash(const uint8_t* data)
+
+ALWAYS_INLINE static uint32_t tetra_twist(uint32_t input)
 {
-    uint32_t hash = 5381;
-    for (size_t i = 0; i < sizeof(uint32_t); ++i)
-    {
-        hash = ((hash << 5) + hash) + data[i];
-    }
-    return hash;
+    /**
+     * Custom hash function that is used to generate the encryption key.
+     * This has strong avalanche properties and is used to ensure that
+     * small changes in the input result in large changes in the output.
+     */
+
+    constexpr uint32_t prime1 = 0x9E3779B1; // a large prime number
+    constexpr uint32_t prime2 = 0x85EBCA77; // another large prime number
+
+    input ^= input >> 15;
+    input *= prime1;
+    input ^= input >> 12;
+    input *= prime2;
+    input ^= input >> 4;
+    input *= prime1;
+    input ^= input >> 16;
+
+    return input;
 }
 
 ALWAYS_INLINE static uint32_t transform(uintptr_t offset, uint32_t key)
 {
     uint32_t key2 = key + offset;
-    return djb2_hash((const uint8_t*)&key2);
+    return tetra_twist(key2);
 }
 #endif // CODE_ENCRYPTION
 

@@ -66,15 +66,36 @@ def get_functions(sections, link_base):
                     })
     return functions
 
-def djb2_hash(data: bytes) -> int:
-    hash_val = 5381
-    for byte in data:
-        hash_val = ((hash_val << 5) + hash_val) + byte
-    return hash_val & 0xFFFFFFFF
+def tetra_twist(data: bytes) -> int:
+    """
+    Custom hash function that is used to generate the encryption key.
+    This has strong avalanche properties and is used to ensure that
+    small changes to the input result in large changes to the output.
+    """
+
+    assert len(data) == 4, "Input should be 4 bytes"
+
+    input_val = int.from_bytes(data, 'little')  # Convert bytes to an integer
+    prime1 = 0x9E3779B1
+    prime2 = 0x85EBCA77
+
+    input_val ^= input_val >> 15
+    input_val *= prime1
+    input_val &= 0xFFFFFFFF
+    input_val ^= input_val >> 12
+    input_val *= prime2
+    input_val &= 0xFFFFFFFF
+    input_val ^= input_val >> 4
+    input_val *= prime1
+    input_val &= 0xFFFFFFFF
+    input_val ^= input_val >> 16
+
+    return input_val & 0xFFFFFFFF
+
 
 def transform(offset: int, key: int) -> int:
     key2 = key + offset
-    return djb2_hash(struct.pack("<I", key2))
+    return tetra_twist(struct.pack("<I", key2))
 
 def replace_opcode(instruction, shuffled):
     # Extract the opcode from the instruction
