@@ -28,6 +28,7 @@ endif()
 option(RISCVM_DIRECT_DISPATCH "" OFF)
 option(RISCVM_CODE_ENCRYPTION "" ON)
 option(RISCVM_OPCODE_SHUFFLING "" ON)
+option(RISCVM_DEBUG_SYSCALLS "" ON)
 
 project(riscvm)
 
@@ -59,6 +60,12 @@ endif()
 if(RISCVM_OPCODE_SHUFFLING) # RISCVM_OPCODE_SHUFFLING
 	target_compile_definitions(riscvm PRIVATE
 		OPCODE_SHUFFLING
+	)
+endif()
+
+if(RISCVM_DEBUG_SYSCALLS) # RISCVM_DEBUG_SYSCALLS
+	target_compile_definitions(riscvm PRIVATE
+		DEBUG_SYSCALLS
 	)
 endif()
 

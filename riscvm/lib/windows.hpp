@@ -304,7 +304,7 @@ template <class... Ts> ALWAYS_INLINE inline uint32_t invoke_syscall(uintptr_t fu
 {
     uint64_t arg_array[13] = {(uint64_t)(args)...};
 
-    register uint64_t syscall_id asm("a7") = (uint64_t)e_syscall::windows_syscall;
+    register uint64_t syscall_id asm("a7") = (uint64_t)e_syscall::host_call;
 
     register uint64_t _a0 asm("a0") = (uint64_t)func_addr;
     register uint64_t _a1 asm("a1") = (uint64_t)&arg_array;
