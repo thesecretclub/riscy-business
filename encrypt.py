@@ -3,42 +3,6 @@ import re
 import sys
 import argparse
 import struct
-import random
-
-op_table = {
-    0:  "load",
-    1:  "unimp",
-    2:  "unimp",
-    3:  "fence",
-    4:  "imm64",
-    5:  "auipc",
-    6:  "imm32",
-    7:  "unimp",
-    8:  "store",
-    9:  "unimp",
-    10: "unimp",
-    11: "unimp",
-    12: "op64",
-    13: "lui",
-    14: "op32",
-    15: "unimp",
-    16: "unimp",
-    17: "unimp",
-    18: "unimp",
-    19: "unimp",
-    20: "unimp",
-    21: "unimp",
-    22: "unimp",
-    23: "unimp",
-    24: "branch",
-    25: "jalr",
-    26: "unimp",
-    27: "jal",
-    28: "system",
-    29: "unimp",
-    30: "unimp",
-    31: "unimp"
-}
 
 def parse_map_file(filename):
     with open(filename, 'r') as f:
@@ -123,9 +87,9 @@ def replace_opcode(instruction, shuffled):
     instruction |= (new_opcode << 2)
     return instruction
 
-def encrypt_function(encrypt: bool, data: bytearray, function: dict, key: int, shuffled: dict = None):
+def process_function(encrypt: bool, data: bytearray, function: dict, key: int, shuffled: dict = None):
     """Encrypts the provided function in place based on the function address and key."""
-    print(f"Encrypting function {function['symbol']} at {hex(function['vma'])} with size {hex(function['size'])}")
+    print(f"Processing function {function['symbol']} at {hex(function['vma'])} with size {hex(function['size'])}")
     for i in range(0, function['size'], 4):
         offset = function['address'] + i
         dword, = struct.unpack("<I", data[offset:offset+4])
@@ -140,10 +104,10 @@ def encrypt_function(encrypt: bool, data: bytearray, function: dict, key: int, s
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="Input RISC-V binary")
-    parser.add_argument("--shuffle", "-s", help="Shuffle the operands", action="store_true")
-    parser.add_argument("--encrypt", "-e", help="Encrypt Binary", action="store_true")
-    parser.add_argument("--map", "-m", help="Input map file")
-    parser.add_argument("--output", "-b", help="Output binary file")
+    parser.add_argument("--shuffle", "-s", help="Shuffle the operands", action="store_true", default=False)
+    parser.add_argument("--encrypt", "-e", help="Encrypt Binary", action="store_true", default=False)
+    parser.add_argument("--map", "-m", help="Input map file", required=True)
+    parser.add_argument("--output", "-o", help="Output binary file", required=True)
     parser.add_argument("--key", "-k", help="Encryption key (hex, int)", default="0xDEADBEEF")
     parser.add_argument("--shuffle-map", "-sm", help="Shuffle map file")
 
@@ -186,15 +150,16 @@ def main():
 
     shuffle_map = None
     if shuffle:
+        if shuffle_json is None:
+            print("Shuffle map file required when shuffling")
+            sys.exit(1)
         with open(shuffle_json, "r") as f:
             shuffle_map = json.load(f)
             shuffle_map = {int(k): int(v) for k, v in shuffle_map.items()}
 
-    print(shuffle_map)
-
     # Encrypt the functions
     for function in functions:
-        encrypt_function(encrypt, binary, function, key, shuffle_map)
+        process_function(encrypt, binary, function, key, shuffle_map)
 
     # Write the encrypted binary
     with open(output, "wb") as f:

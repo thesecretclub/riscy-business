@@ -27,6 +27,7 @@ endif()
 # Options
 option(RISCVM_DIRECT_DISPATCH "" OFF)
 option(RISCVM_CODE_ENCRYPTION "" OFF)
+option(RISCVM_OPCODE_SHUFFLING "" OFF)
 
 project(riscvm)
 
@@ -34,6 +35,7 @@ project(riscvm)
 set(riscvm_SOURCES
 	riscvm.cpp
 	riscvm.h
+	shuffled_opcodes.h
 	cmake.toml
 )
 
@@ -51,6 +53,12 @@ endif()
 if(RISCVM_CODE_ENCRYPTION) # RISCVM_CODE_ENCRYPTION
 	target_compile_definitions(riscvm PRIVATE
 		CODE_ENCRYPTION
+	)
+endif()
+
+if(RISCVM_OPCODE_SHUFFLING) # RISCVM_OPCODE_SHUFFLING
+	target_compile_definitions(riscvm PRIVATE
+		OPCODE_SHUFFLING
 	)
 endif()
 

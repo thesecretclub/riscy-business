@@ -247,6 +247,10 @@ enum RegIndex
     reg_t6,
 };
 
+#ifdef OPCODE_SHUFFLING
+#warning Opcode shuffling enabled
+#include "shuffled_opcodes.h"
+#else
 enum Opcode
 {
     rv64_load    = 0b00000,
@@ -264,3 +268,4 @@ enum Opcode
     rv64_system  = 0b11100,
     rv64_invalid = 0b11111,
 };
+#endif // OPCODE_SHUFFLING

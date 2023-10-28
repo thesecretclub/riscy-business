@@ -5,13 +5,15 @@ name = "riscvm"
 [options]
 RISCVM_DIRECT_DISPATCH = false
 RISCVM_CODE_ENCRYPTION = false
+RISCVM_OPCODE_SHUFFLING = false
 
 [target.riscvm]
 type = "executable"
 sources = ["riscvm.cpp"]
-headers = ["riscvm.h"]
+headers = ["riscvm.h", "shuffled_opcodes.h"]
 compile-features = ["cxx_std_17"]
 RISCVM_DIRECT_DISPATCH.compile-definitions = ["DIRECT_DISPATCH"]
 RISCVM_CODE_ENCRYPTION.compile-definitions = ["CODE_ENCRYPTION"]
+RISCVM_OPCODE_SHUFFLING.compile-definitions = ["OPCODE_SHUFFLING"]
 clang-cl.compile-options = ["/clang:-fno-jump-tables", "/clang:-mno-sse"]
 msvc.link-options = ["/DYNAMICBASE:NO", "/INCREMENTAL:NO"]

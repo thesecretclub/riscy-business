@@ -45,6 +45,7 @@ void riscvm_loadfile(riscvm_ptr self, const char* filename)
 }
 
 #ifdef CODE_ENCRYPTION
+#warning Code encryption enabled
 // TODO: replace with something with better distribution?
 ALWAYS_INLINE static uint32_t djb2_hash(const uint8_t* data)
 {
@@ -322,7 +323,23 @@ ALWAYS_INLINE static __int128 riscvm_shr_int128(__int128 a, __int128 b)
     }
 }
 
+#ifdef OPCODE_SHUFFLING
+#define trace_inst(inst)                                                                                    \
+    unsigned char* p_inst = (unsigned char*)&inst.bits;                                                     \
+    (void)p_inst;                                                                                           \
+    uint8_t opcode = inst.opcode;                                                                           \
+    inst.opcode    = riscvm_original_opcode(inst.opcode);                                                   \
+    trace("pc: 0x%llx, inst: %02x %02x %02x %02x\n", self->pc, p_inst[0], p_inst[1], p_inst[2], p_inst[3]); \
+    inst.opcode = opcode
+#else
+#define trace_inst(inst)                                \
+    unsigned char* p_inst = (unsigned char*)&inst.bits; \
+    (void)p_inst;                                       \
+    trace("pc: 0x%llx, inst: %02x %02x %02x %02x\n", self->pc, p_inst[0], p_inst[1], p_inst[2], p_inst[3])
+#endif // OPCODE_SHUFFLING
+
 #ifdef DIRECT_DISPATCH
+#warning Direct dispatch enabled
 #define HANDLER(op)   handler_##op
 #define FWHANDLER(op) static bool HANDLER(op)(riscvm_ptr self, Instruction inst)
 FWHANDLER(rv64_load);
@@ -368,16 +385,14 @@ static constexpr std::array<riscvm_handler_t, 32> riscvm_handlers = []
     return result;
 }();
 
-#define dispatch()                                                                                          \
-    Instruction next;                                                                                       \
-    next.bits = riscvm_fetch(self);                                                                         \
-    if (next.compressed_flags != 0b11)                                                                      \
-    {                                                                                                       \
-        panic("compressed instructions not supported!");                                                    \
-    }                                                                                                       \
-    unsigned char* p_inst = (unsigned char*)&next.bits;                                                     \
-    (void)p_inst;                                                                                           \
-    trace("pc: 0x%llx, inst: %02x %02x %02x %02x\n", self->pc, p_inst[0], p_inst[1], p_inst[2], p_inst[3]); \
+#define dispatch()                                       \
+    Instruction next;                                    \
+    next.bits = riscvm_fetch(self);                      \
+    if (next.compressed_flags != 0b11)                   \
+    {                                                    \
+        panic("compressed instructions not supported!"); \
+    }                                                    \
+    trace_inst(next);                                    \
     __attribute__((musttail)) return riscvm_handlers[next.opcode](self, next)
 
 #else
@@ -1175,9 +1190,7 @@ NEVER_INLINE void riscvm_run(riscvm_ptr self)
         Instruction inst;
         inst.bits = riscvm_fetch(self);
 
-        unsigned char* p_inst = (unsigned char*)&inst.bits;
-        (void)p_inst;
-        trace("pc: 0x%llx, inst: %02x %02x %02x %02x\n", self->pc, p_inst[0], p_inst[1], p_inst[2], p_inst[3]);
+        trace_inst(inst);
 
         if (!riscvm_execute(self, inst))
             break;
