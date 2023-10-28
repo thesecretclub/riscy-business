@@ -31,7 +31,7 @@ message(STATUS "Found llvm-objcopy: ${OBJCOPY_EXECUTABLE}")
 set(SCRIPT_DIR "${CMAKE_CURRENT_LIST_DIR}/../..")
 
 message(STATUS "Compiling RV64 CRT...")
-set(CRT0_SRC "${SCRIPT_DIR}/test/crt0.c")
+set(CRT0_SRC "${SCRIPT_DIR}/riscvm/lib/crt0.c")
 set(CRT0_OBJ "${CMAKE_CURRENT_BINARY_DIR}/crt0.o")
 configure_file("${CRT0_SRC}" crt0.c COPYONLY)
 set(RV64_FLAGS -target riscv64 -march=rv64g -fno-exceptions -mcmodel=medany -fshort-wchar -Os)
@@ -82,7 +82,7 @@ function(add_riscvm_executable tgt)
         COMMAND "${Python3_EXECUTABLE}" "${SCRIPT_DIR}/extract-bc.py" "$<TARGET_FILE:${tgt}>" -o "${BC_BASE}.bc"
         COMMAND "${TRANSPILER}" -input "${BC_BASE}.bc" -output "${BC_BASE}.rv64.bc"
         COMMAND "${CLANG_EXECUTABLE}" ${RV64_FLAGS} -c "${BC_BASE}.rv64.bc" -o "${BC_BASE}.rv64.o"
-        COMMAND "${LLD_EXECUTABLE}" -o "${BC_BASE}.elf" --oformat=elf -emit-relocs -T "${SCRIPT_DIR}/test/linker.ld" "--Map=${BC_BASE}.map" "${CRT0_OBJ}" "${BC_BASE}.rv64.o"
+        COMMAND "${LLD_EXECUTABLE}" -o "${BC_BASE}.elf" --oformat=elf -emit-relocs -T "${SCRIPT_DIR}/riscvm/lib/linker.ld" "--Map=${BC_BASE}.map" "${CRT0_OBJ}" "${BC_BASE}.rv64.o"
         COMMAND "${OBJCOPY_EXECUTABLE}" -O binary "${BC_BASE}.elf" "${BC_BASE}.pre.bin"
         COMMAND "${Python3_EXECUTABLE}" "${SCRIPT_DIR}/relocs.py" "${BC_BASE}.elf" --binary "${BC_BASE}.pre.bin" --output "${BC_BASE}.bin"
         COMMAND "${Python3_EXECUTABLE}" "${SCRIPT_DIR}/encrypt.py" --encrypt --shuffle --map "${BC_BASE}.map" --shuffle-map "${SCRIPT_DIR}/riscvm/shuffled_opcodes.json" --output "${BC_BASE}.enc.bin" "${BC_BASE}.bin"

@@ -1,5 +1,5 @@
-#include "../riscvm_lib2/syscalls.hpp"
-#include "../riscvm_lib2/windows.hpp"
+#include "../lib/syscalls.hpp"
+#include "../lib/windows.hpp"
 
 struct Blah2
 {
