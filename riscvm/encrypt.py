@@ -77,13 +77,12 @@ def tetra_twist(data: bytes) -> int:
 
     input_val = int.from_bytes(data, 'little')  # Convert bytes to an integer
     prime1 = 0x9E3779B1
-    prime2 = 0x85EBCA77
 
     input_val ^= input_val >> 15
     input_val *= prime1
     input_val &= 0xFFFFFFFF
     input_val ^= input_val >> 12
-    input_val *= prime2
+    input_val *= prime1
     input_val &= 0xFFFFFFFF
     input_val ^= input_val >> 4
     input_val *= prime1
