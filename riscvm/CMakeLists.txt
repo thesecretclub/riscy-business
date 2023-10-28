@@ -91,3 +91,14 @@ get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} D
 if(NOT CMKR_VS_STARTUP_PROJECT)
 	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT riscvm)
 endif()
+
+# Target: riscvm-crt0
+set(riscvm-crt0_SOURCES
+	"lib/crt0.c"
+	cmake.toml
+)
+
+add_custom_target(riscvm-crt0 SOURCES)
+
+target_sources(riscvm-crt0 PRIVATE ${riscvm-crt0_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${riscvm-crt0_SOURCES})
