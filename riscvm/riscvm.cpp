@@ -104,12 +104,11 @@ ALWAYS_INLINE static uint32_t tetra_twist(uint32_t input)
      */
 
     constexpr uint32_t prime1 = 0x9E3779B1; // a large prime number
-    constexpr uint32_t prime2 = 0x85EBCA77; // another large prime number
 
     input ^= input >> 15;
     input *= prime1;
     input ^= input >> 12;
-    input *= prime2;
+    input *= prime1;
     input ^= input >> 4;
     input *= prime1;
     input ^= input >> 16;
