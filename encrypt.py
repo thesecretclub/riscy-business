@@ -169,10 +169,10 @@ def main():
     rela_offset += 4
     while binary[rela_offset] != 0:
         rela = binary[rela_offset:rela_offset + 13]
-        assert len(rela) == 12
-        type, offset, addend = struct.unpack("<BIQ", rela)
-        print(f"Relocation type {type} at offset {offset} with addend {addend}")
-        rela_offset += 12
+        assert len(rela) == 13
+        type, offset, addend = struct.unpack("<BIq", rela)
+        print(f"Relocation type {type} at offset {hex(offset)} with addend {addend}")
+        rela_offset += 13
     assert rela_offset + 1 == len(binary), "Incorrect relocation format"
 
     # Append the feature section
