@@ -216,14 +216,48 @@ ALWAYS_INLINE static bool riscvm_handle_syscall(riscvm_ptr self, uint64_t code, 
         return false;
     }
 
-#ifdef _DEBUG
+#ifdef DEBUG_SYSCALLS
     case 10001: // abort
     {
         panic("aborted!");
         return false;
     }
 
-    case 10100:
+    case 10006: // memcpy
+    {
+        void* src  = riscvm_getptr(self, reg_read(reg_a0));
+        void* dest = riscvm_getptr(self, reg_read(reg_a1));
+        void* res  = memcpy(dest, src, (size_t)reg_read(reg_a2));
+        result     = (uint64_t)res;
+        break;
+    }
+
+    case 10007: // memset
+    {
+        void* dest = riscvm_getptr(self, reg_read(reg_a0));
+        void* res  = memset(dest, (int)reg_read(reg_a1), (size_t)reg_read(reg_a2));
+        result     = (uint64_t)res;
+        break;
+    }
+
+    case 10008: // memmove
+    {
+        void* src  = riscvm_getptr(self, reg_read(reg_a0));
+        void* dest = riscvm_getptr(self, reg_read(reg_a1));
+        void* res  = memmove(dest, src, (size_t)reg_read(reg_a2));
+        result     = (uint64_t)res;
+        break;
+    }
+
+    case 10009: // memcmp
+    {
+        void* src1 = riscvm_getptr(self, reg_read(reg_a0));
+        void* src2 = riscvm_getptr(self, reg_read(reg_a1));
+        result     = (uint64_t)memcmp(src1, src2, (size_t)reg_read(reg_a2));
+        break;
+    }
+
+    case 10100: // print_wstring
     {
         wchar_t* s = (wchar_t*)riscvm_getptr(self, reg_read(reg_a0));
         if (s != NULL)
@@ -233,7 +267,7 @@ ALWAYS_INLINE static bool riscvm_handle_syscall(riscvm_ptr self, uint64_t code, 
         break;
     }
 
-    case 10101:
+    case 10101: // print_string
     {
         char* s = (char*)riscvm_getptr(self, reg_read(reg_a0));
         if (s != NULL)
@@ -243,26 +277,26 @@ ALWAYS_INLINE static bool riscvm_handle_syscall(riscvm_ptr self, uint64_t code, 
         break;
     }
 
-    case 10102:
+    case 10102: // print_int
     {
         log("value: %lli\n", reg_read(reg_a0));
         break;
     }
 
-    case 10103:
+    case 10103: // print_hex
     {
         log("value: 0x%llx\n", reg_read(reg_a0));
         break;
     }
 
-    case 10104:
+    case 10104: // print_tag_hex
     {
         log("%s: 0x%llx\n", (char*)reg_read(reg_a0), reg_read(reg_a1));
         break;
     }
-#endif
+#endif // DEBUG_SYSCALLS
 
-    case 20000:
+    case 20000: // host_call
     {
         uint64_t  func_addr = reg_read(reg_a0);
         uint64_t* args      = (uint64_t*)riscvm_getptr(self, reg_read(reg_a1));
@@ -289,9 +323,8 @@ ALWAYS_INLINE static bool riscvm_handle_syscall(riscvm_ptr self, uint64_t code, 
         break;
     }
 
-    case 20001:
+    case 20001: // get_peb
     {
-        // return PEB
         result = __readgsqword(0x60);
         break;
     }

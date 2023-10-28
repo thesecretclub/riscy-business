@@ -22,7 +22,7 @@ enum class e_syscall : uint32_t
     print_hex = 10103,
     print_tag_hex = 10104,
 
-    windows_syscall = 20000,
+    host_call = 20000,
     get_peb = 20001,
 };
 
