@@ -134,20 +134,6 @@ def shuffle_operands(instruction, shuffled, opcodes):
     instruction = replace_opcode(instruction, shuffled["rv64_opcodes"])
     return instruction
 
-def process_function(encrypt: bool, data: bytearray, function: dict, key: int, shuffled: dict = None, opcodes: dict = None):
-    """Encrypts the provided function in place based on the function address and key."""
-    print(f"Processing function {function['symbol']} at {hex(function['vma'])} with size {hex(function['size'])}")
-    for i in range(0, function['size'], 4):
-        offset = function['address'] + i
-        dword, = struct.unpack("<I", data[offset:offset+4])
-
-        if shuffled is not None or opcodes is not None:
-            # Shuffle the operands
-            dword = shuffle_operands(dword, shuffled, opcodes)
-        if encrypt:
-            dword = dword ^ transform(offset, key)
-        data[offset:offset+4] = struct.pack("<I", dword)
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="Input RISC-V binary")
@@ -225,7 +211,15 @@ def main():
             
     # Encrypt the functions
     for function in functions:
-        process_function(encrypt, binary, function, key, shuffle_map, opcode_map)
+        print(f"Processing function {function['symbol']} at {hex(function['vma'])} with size {hex(function['size'])}")
+        for i in range(0, function['size'], 4):
+            offset = function['address'] + i
+            dword, = struct.unpack("<I", binary[offset:offset+4])
+            if shuffle:
+                dword = shuffle_operands(dword, shuffle_map, opcode_map)
+            if encrypt:
+                dword = dword ^ transform(offset, key)
+            binary[offset:offset+4] = struct.pack("<I", dword)
 
     # Walk and verify the relocations
     rela_offset = binary.rfind(b"YARA")
