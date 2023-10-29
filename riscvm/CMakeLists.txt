@@ -36,7 +36,9 @@ project(riscvm)
 set(riscvm_SOURCES
 	riscvm.cpp
 	riscvm.h
+	opcodes.h
 	shuffled_opcodes.h
+	trace.h
 	cmake.toml
 )
 
