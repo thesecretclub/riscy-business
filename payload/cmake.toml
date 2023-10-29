@@ -8,6 +8,7 @@ name = "payload"
 languages = ["CXX"]
 cmake-before = "set(CMAKE_CONFIGURATION_TYPES Debug Release)"
 include-after = ["cmake/riscvm.cmake"]
+msvc-runtime = "static"
 
 [template.riscvm]
 type = "executable"
@@ -32,8 +33,4 @@ compile-features = ["cxx_std_17"]
 msvc.link-options = [
 	"/INCREMENTAL:NO",
 	"/DEBUG",
-]
-clang.link-options = [
-	"-Xlinker",
-	"/ENTRY:EntryPoint",
 ]

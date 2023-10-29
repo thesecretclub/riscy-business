@@ -8,9 +8,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("executable", help="Executable with embedded .llvmbc section")
     parser.add_argument("--output", "-o", help="Output file name", required=True)
+    parser.add_argument("--importmap", help="Import map", required=False)
     args = parser.parse_args()
     executable: str = args.executable
     output: str = args.output
+    importmap: str = args.importmap
 
     # Find the .llvmbc section
     pe = pefile.PE(executable)
@@ -22,6 +24,15 @@ def main():
     if llvmbc is None:
         print("No .llvmbc section found")
         sys.exit(1)
+
+    # Save the import map
+    if importmap is not None:
+        with open(importmap, "wb") as f:
+            for desc in pe.DIRECTORY_ENTRY_IMPORT:
+                dll = desc.dll.decode("utf-8")
+                for imp in desc.imports:
+                    name = imp.name.decode("utf-8")
+                    f.write(f"{name}:{dll}\n".encode("utf-8"))
 
     # Recover the bitcode and write it to a file
     with open(output, "wb") as f:

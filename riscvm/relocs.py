@@ -90,7 +90,7 @@ class MyRelocation:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="Input ELF binary")
-    parser.add_argument("--output", "-o", help="Output relocation file")
+    parser.add_argument("--output", "-o", help="Output binary with relocations")
     parser.add_argument("--binary", "-b", help="Input binary", required=False)
     args = parser.parse_args()
     input: str = args.input
