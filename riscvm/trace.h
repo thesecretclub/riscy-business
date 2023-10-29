@@ -36,43 +36,43 @@ void trace_load(riscvm_ptr self, Instruction inst, char* buffer)
 
     switch (inst.itype.funct3)
     {
-    case 0b000:
+    case rv64_load_lb:
     {
         memnomic = "lb";
         val      = riscvm_read<int8_t>(addr);
         break;
     }
-    case 0b001:
+    case rv64_load_lh:
     {
         memnomic = "lh";
         val      = riscvm_read<int16_t>(addr);
         break;
     }
-    case 0b010:
+    case rv64_load_lw:
     {
         memnomic = "lw";
         val      = riscvm_read<int32_t>(addr);
         break;
     }
-    case 0b011:
+    case rv64_load_ld:
     {
         memnomic = "ld";
         val      = riscvm_read<int64_t>(addr);
         break;
     }
-    case 0b100:
+    case rv64_load_lbu:
     {
         memnomic = "lbu";
         val      = riscvm_read<uint8_t>(addr);
         break;
     }
-    case 0b101:
+    case rv64_load_lhu:
     {
         memnomic = "lhu";
         val      = riscvm_read<uint16_t>(addr);
         break;
     }
-    case 0b110:
+    case rv64_load_lwu:
     {
         memnomic = "lwu";
         val      = riscvm_read<uint32_t>(addr);
@@ -90,7 +90,7 @@ void trace_load(riscvm_ptr self, Instruction inst, char* buffer)
     sprintf(buffer, "%-8s %s, %s(%s=>%s) = %s", memnomic, ra, buf_imm, reg, buf_addr, buf_val);
 }
 
-void trace_imm(riscvm_ptr self, Instruction inst, char* buffer)
+void trace_imm64(riscvm_ptr self, Instruction inst, char* buffer)
 {
     int64_t imm = bit_signer(inst.itype.imm, 12);
     int64_t rs1 = reg_read(inst.itype.rs1);
@@ -103,65 +103,89 @@ void trace_imm(riscvm_ptr self, Instruction inst, char* buffer)
     // tracing
     switch (inst.itype.funct3)
     {
-    case 0b000:
+    case rv64_imm64_addi:
         memnomic = "addi";
         val      = rs1 + imm;
         break;
-    case 0b001:
+    case rv64_imm64_slli:
         memnomic = "slli";
         imm      = inst.rwtype.rs2;
         val      = rs1 << imm;
         break;
-    case 0b010:
+    case rv64_imm64_slti:
         memnomic = "slti";
         val      = rs1 < imm;
         break;
-    case 0b011:
+    case rv64_imm64_sltiu:
         memnomic = "sltiu";
         val      = rs1 < imm;
         break;
-    case 0b100:
+    case rv64_imm64_xori:
         memnomic = "xori";
         val      = rs1 ^ imm;
         break;
-    case 0b101:
+    case rv64_imm64_srli:
         memnomic = "srli";
         imm      = inst.rwtype.rs2;
         val      = rs1 >> imm;
         break;
-    case 0b110:
+    case rv64_imm64_ori:
         memnomic = "ori";
         val      = rs1 | imm;
         break;
-    case 0b111:
+    case rv64_imm64_andi:
         memnomic = "andi";
         val      = rs1 & imm;
         break;
     default:
-        memnomic = "unk(imm)";
+        memnomic = "unk(imm64)";
         break;
     }
-    if (inst.opcode == rv64_imm64)
-    {
-        TO_SIGNED_HEX_64(imm);
-        TO_SIGNED_HEX_64(val);
-        sprintf(buffer, "%-8s %s, %s, %s = %s", memnomic, ra, reg, buf_imm, buf_val);
-    }
-    else
-    {
-        char memn[128];
 
-        TO_SIGNED_HEX_32(imm);
-        TO_SIGNED_HEX_32(val);
-
-        (void)strcpy(memn, memnomic);
-        (void)strcat(memn, "w");
-
-        sprintf(buffer, "%-8s %s, %s, %s = %s", memn, ra, reg, buf_imm, buf_val);
-    }
+    TO_SIGNED_HEX_64(imm);
+    TO_SIGNED_HEX_64(val);
+    sprintf(buffer, "%-8s %s, %s, %s = %s", memnomic, ra, reg, buf_imm, buf_val);
 }
 
-void trace_op(riscvm_ptr self, Instruction inst, char* buffer)
+void trace_imm32(riscvm_ptr self, Instruction inst, char* buffer)
+{
+    int64_t imm = bit_signer(inst.itype.imm, 12);
+    int64_t rs1 = reg_read(inst.itype.rs1);
+    int64_t val = 0;
+
+    const char* memnomic = nullptr;
+    const char* reg      = reg_names[inst.itype.rs1];
+    const char* ra       = reg_names[inst.itype.rd];
+
+    // tracing
+    switch (inst.itype.funct3)
+    {
+    case rv64_imm32_addiw:
+        memnomic = "addiw";
+        val      = rs1 + imm;
+        break;
+    case rv64_imm32_slliw:
+        memnomic = "slliw";
+        imm      = inst.rwtype.rs2;
+        val      = rs1 << imm;
+        break;
+    case rv64_imm32_srliw:
+        memnomic = "srliw";
+        imm      = inst.rwtype.rs2;
+        val      = rs1 >> imm;
+        break;
+    default:
+        memnomic = "unk(imm32)";
+        break;
+    }
+
+    TO_SIGNED_HEX_32(imm);
+    TO_SIGNED_HEX_32(val);
+
+    sprintf(buffer, "%-8s %s, %s, %s = %s", memnomic, ra, reg, buf_imm, buf_val);
+}
+
+void trace_op64(riscvm_ptr self, Instruction inst, char* buffer)
 {
     int64_t rs1 = reg_read(inst.rtype.rs1);
     int64_t rs2 = reg_read(inst.rtype.rs2);
@@ -174,96 +198,147 @@ void trace_op(riscvm_ptr self, Instruction inst, char* buffer)
 
     switch ((inst.rtype.funct7 << 3) | inst.rtype.funct3)
     {
-    case 0b000:
+    case rv64_op64_add:
         memnomic = "add";
         val      = rs1 + rs2;
         break;
-    case 0b100000000:
+    case rv64_op64_sub:
         memnomic = "sub";
         val      = rs1 - rs2;
         break;
-    case 0b001:
+    case rv64_op64_sll:
         memnomic = "sll";
         val      = rs1 << rs2;
         break;
-    case 0b010:
+    case rv64_op64_slt:
         memnomic = "slt";
         val      = rs1 < rs2;
         break;
-    case 0b0000011:
+    case rv64_op64_sltu:
         memnomic = "sltu";
         val      = rs1 < rs2;
         break;
-    case 0b0000100:
+    case rv64_op64_xor:
         memnomic = "xor";
         val      = rs1 ^ rs2;
         break;
-    case 0b101:
+    case rv64_op64_srl:
         memnomic = "srl";
         val      = rs1 >> rs2;
         break;
-    case 0b100000101:
+    case rv64_op64_sra:
         memnomic = "sra";
         val      = rs1 >> rs2;
         break;
-    case 0b110:
+    case rv64_op64_or:
         memnomic = "or";
         val      = rs1 | rs2;
         break;
-    case 0b111:
+    case rv64_op64_and:
         memnomic = "and";
         val      = rs1 & rs2;
         break;
-    case 0b1000:
+    case rv64_op64_mul:
         memnomic = "mul";
         val      = rs1 * rs2;
         break;
-    case 0b1001:
+    case rv64_op64_mulh:
         memnomic = "mulh";
         val      = (__int128)(rs1 * rs2) >> 64;
         break;
-    case 0b1010:
+    case rv64_op64_mulhsu:
         memnomic = "mulhsu";
         val      = (__int128)(rs1 * rs2) >> 64;
         break;
-    case 0b1011:
+    case rv64_op64_mulhu:
         memnomic = "mulhu";
         val      = (__int128)(rs1 * rs2) >> 64;
         break;
-    case 0b1100:
+    case rv64_op64_div:
         memnomic = "div";
         val      = rs1 / rs2;
         break;
-    case 0b1101:
+    case rv64_op64_divu:
         memnomic = "divu";
         val      = rs1 / rs2;
         break;
-    case 0b1110:
+    case rv64_op64_rem:
         memnomic = "rem";
         val      = rs1 % rs2;
         break;
-    case 0b1111:
+    case rv64_op64_remu:
         memnomic = "remu";
         val      = rs1 % rs2;
         break;
     default:
-        memnomic = "unk(op)";
+        memnomic = "unk(op64)";
         break;
     }
 
-    if (inst.opcode == rv64_op64)
+    TO_SIGNED_HEX_64(val);
+    sprintf(buffer, "%-8s %s, %s, %s = %s", memnomic, ra, reg1, reg2, buf_val);
+}
+
+void trace_op32(riscvm_ptr self, Instruction inst, char* buffer)
+{
+    int64_t rs1 = reg_read(inst.rtype.rs1);
+    int64_t rs2 = reg_read(inst.rtype.rs2);
+    int64_t val = 0;
+
+    const char* memnomic = nullptr;
+    const char* reg1     = reg_names[inst.rtype.rs1];
+    const char* reg2     = reg_names[inst.rtype.rs2];
+    const char* ra       = reg_names[inst.rtype.rd];
+
+    switch ((inst.rtype.funct7 << 3) | inst.rtype.funct3)
     {
-        TO_SIGNED_HEX_64(val);
-        sprintf(buffer, "%-8s %s, %s, %s = %s", memnomic, ra, reg1, reg2, buf_val);
+    case rv64_op32_addw:
+        memnomic = "addw";
+        val      = rs1 + rs2;
+        break;
+    case rv64_op32_subw:
+        memnomic = "subw";
+        val      = rs1 - rs2;
+        break;
+    case rv64_op32_sllw:
+        memnomic = "sllw";
+        val      = rs1 << rs2;
+        break;
+    case rv64_op32_srlw:
+        memnomic = "srlw";
+        val      = rs1 >> rs2;
+        break;
+    case rv64_op32_sraw:
+        memnomic = "sraw";
+        val      = rs1 >> rs2;
+        break;
+    case rv64_op32_mulw:
+        memnomic = "mulw";
+        val      = rs1 * rs2;
+        break;
+    case rv64_op32_divw:
+        memnomic = "divw";
+        val      = rs1 / rs2;
+        break;
+    case rv64_op32_divuw:
+        memnomic = "divuw";
+        val      = rs1 / rs2;
+        break;
+    case rv64_op32_remw:
+        memnomic = "remw";
+        val      = rs1 % rs2;
+        break;
+    case rv64_op32_remuw:
+        memnomic = "remuw";
+        val      = rs1 % rs2;
+        break;
+    default:
+        memnomic = "unk(op32)";
+        break;
     }
-    else
-    {
-        char memn[128];
-        TO_SIGNED_HEX_32(val);
-        (void)strcpy(memn, memnomic);
-        (void)strcat(memn, "w");
-        sprintf(buffer, "%-8s %s, %s, %s = 0x%x", memn, ra, reg1, reg2, buf_val);
-    }
+
+    TO_SIGNED_HEX_32(val);
+    sprintf(buffer, "%-8s %s, %s, %s = 0x%x", memnomic, ra, reg1, reg2, buf_val);
 }
 
 void trace_fence(riscvm_ptr self, Instruction inst, char* buffer)
@@ -296,22 +371,22 @@ void trace_store(riscvm_ptr self, Instruction inst, char* buffer)
 
     switch (inst.stype.funct3)
     {
-    case 0b00:
+    case rv64_store_sb:
     {
         memnomic = "sb";
         break;
     }
-    case 0b01:
+    case rv64_store_sh:
     {
         memnomic = "sh";
         break;
     }
-    case 0b10:
+    case rv64_store_sw:
     {
         memnomic = "sw";
         break;
     }
-    case 0b11:
+    case rv64_store_sd:
     {
         memnomic = "sd";
         break;
@@ -363,27 +438,27 @@ void trace_branch(riscvm_ptr self, Instruction inst, char* buffer)
 
     switch (inst.sbtype.funct3)
     {
-    case 0b000:
+    case rv64_branch_beq:
         memnomic = "beq";
         cond     = val1 == val2;
         break;
-    case 0b001:
+    case rv64_branch_bne:
         memnomic = "bne";
         cond     = val1 != val2;
         break;
-    case 0b100:
+    case rv64_branch_blt:
         memnomic = "blt";
         cond     = (int64_t)val1 < (int64_t)val2;
         break;
-    case 0b101:
+    case rv64_branch_bge:
         memnomic = "bge";
         cond     = (int64_t)val1 >= (int64_t)val2;
         break;
-    case 0b110:
+    case rv64_branch_bltu:
         memnomic = "bltu";
         cond     = val1 < val2;
         break;
-    case 0b111:
+    case rv64_branch_bgeu:
         memnomic = "bgeu";
         cond     = val1 >= val2;
         break;
@@ -487,25 +562,25 @@ void riscvm_trace(riscvm_ptr self, Instruction inst)
         trace_fence(self, inst, buffer);
         break;
     case rv64_imm64:
-        trace_imm(self, inst, buffer);
+        trace_imm64(self, inst, buffer);
         break;
     case rv64_auipc:
         trace_auipc(self, inst, buffer);
         break;
     case rv64_imm32:
-        trace_imm(self, inst, buffer);
+        trace_imm32(self, inst, buffer);
         break;
     case rv64_store:
         trace_store(self, inst, buffer);
         break;
     case rv64_op64:
-        trace_op(self, inst, buffer);
+        trace_op64(self, inst, buffer);
         break;
     case rv64_lui:
         trace_lui(self, inst, buffer);
         break;
     case rv64_op32:
-        trace_op(self, inst, buffer);
+        trace_op32(self, inst, buffer);
         break;
     case rv64_branch:
         trace_branch(self, inst, buffer);

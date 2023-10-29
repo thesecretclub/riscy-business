@@ -235,23 +235,7 @@ enum RegIndex
 #warning Opcode shuffling enabled
 #include "shuffled_opcodes.h"
 #else
-enum Opcode
-{
-    rv64_load    = 0b00000,
-    rv64_fence   = 0b00011,
-    rv64_imm64   = 0b00100,
-    rv64_auipc   = 0b00101,
-    rv64_imm32   = 0b00110,
-    rv64_store   = 0b01000,
-    rv64_op64    = 0b01100,
-    rv64_lui     = 0b01101,
-    rv64_op32    = 0b01110,
-    rv64_branch  = 0b11000,
-    rv64_jalr    = 0b11001,
-    rv64_jal     = 0b11011,
-    rv64_system  = 0b11100,
-    rv64_invalid = 0b11111,
-};
+#include "opcodes.h"
 #endif // OPCODE_SHUFFLING
 
 template <typename T> ALWAYS_INLINE static T riscvm_read(uint64_t addr)

@@ -415,37 +415,37 @@ ALWAYS_INLINE static bool handler_rv64_load(riscvm_ptr self, Instruction inst)
     int64_t  val  = 0;
     switch (inst.itype.funct3)
     {
-    case 0b000: // lb
+    case rv64_load_lb:
     {
         val = riscvm_read<int8_t>(addr);
         break;
     }
-    case 0b001: // lh
+    case rv64_load_lh:
     {
         val = riscvm_read<int16_t>(addr);
         break;
     }
-    case 0b010: // lw
+    case rv64_load_lw:
     {
         val = riscvm_read<int32_t>(addr);
         break;
     }
-    case 0b011: // ld
+    case rv64_load_ld:
     {
         val = riscvm_read<int64_t>(addr);
         break;
     }
-    case 0b100: // lbu
+    case rv64_load_lbu:
     {
         val = riscvm_read<uint8_t>(addr);
         break;
     }
-    case 0b101: // lhu
+    case rv64_load_lhu:
     {
         val = riscvm_read<uint16_t>(addr);
         break;
     }
-    case 0b110: // lwu
+    case rv64_load_lwu:
     {
         val = riscvm_read<uint32_t>(addr);
         break;
@@ -473,22 +473,22 @@ ALWAYS_INLINE static bool handler_rv64_store(riscvm_ptr self, Instruction inst)
     uint64_t val  = reg_read(inst.stype.rs2);
     switch (inst.stype.funct3)
     {
-    case 0b00:
+    case rv64_store_sb:
     {
         riscvm_write<uint8_t>(addr, (uint8_t)val);
         break;
     }
-    case 0b01:
+    case rv64_store_sh:
     {
         riscvm_write<uint16_t>(addr, (uint16_t)val);
         break;
     }
-    case 0b10:
+    case rv64_store_sw:
     {
         riscvm_write<uint32_t>(addr, (uint32_t)val);
         break;
     }
-    case 0b11:
+    case rv64_store_sd:
     {
         riscvm_write<uint64_t>(addr, val);
         break;
@@ -510,17 +510,17 @@ ALWAYS_INLINE static bool handler_rv64_imm64(riscvm_ptr self, Instruction inst)
     int64_t val = reg_read(inst.itype.rs1);
     switch (inst.itype.funct3)
     {
-    case 0b000: // addi
+    case rv64_imm64_addi:
     {
         val = val + imm;
         break;
     }
-    case 0b001: // slli
+    case rv64_imm64_slli:
     {
         val = riscvm_shl_int64(val, inst.rwtype.rs2);
         break;
     }
-    case 0b010: // slti
+    case rv64_imm64_slti:
     {
         if (val < imm)
         {
@@ -532,7 +532,7 @@ ALWAYS_INLINE static bool handler_rv64_imm64(riscvm_ptr self, Instruction inst)
         }
         break;
     }
-    case 0b011: // sltiu
+    case rv64_imm64_sltiu:
     {
         if ((uint64_t)val < (uint64_t)imm)
         {
@@ -544,12 +544,12 @@ ALWAYS_INLINE static bool handler_rv64_imm64(riscvm_ptr self, Instruction inst)
         }
         break;
     }
-    case 0b100: // xori
+    case rv64_imm64_xori:
     {
         val = val ^ imm;
         break;
     }
-    case 0b101: // srli
+    case rv64_imm64_srli:
     {
         if (inst.rwtype.shamt)
         {
@@ -561,12 +561,12 @@ ALWAYS_INLINE static bool handler_rv64_imm64(riscvm_ptr self, Instruction inst)
         }
         break;
     }
-    case 0b110: // ori
+    case rv64_imm64_ori:
     {
         val = val | imm;
         break;
     }
-    case 0b111: // andi
+    case rv64_imm64_andi:
     {
         val = val & imm;
         break;
@@ -593,17 +593,17 @@ ALWAYS_INLINE static bool handler_rv64_imm32(riscvm_ptr self, Instruction inst)
     int64_t val = reg_read(inst.itype.rs1);
     switch (inst.itype.funct3)
     {
-    case 0b000: // addiw
+    case rv64_imm32_addiw:
     {
         val = (int64_t)(int32_t)(val + imm);
         break;
     }
-    case 0b001: // slliw
+    case rv64_imm32_slliw:
     {
         val = (int64_t)(int32_t)riscvm_shl_int64(val, imm);
         break;
     }
-    case 0b101: // srliw/sraiw
+    case rv64_imm32_srliw:
     {
         if (inst.rwtype.shamt)
         {
@@ -638,22 +638,22 @@ ALWAYS_INLINE static bool handler_rv64_op64(riscvm_ptr self, Instruction inst)
     int64_t val  = 0;
     switch ((inst.rtype.funct7 << 3) | inst.rtype.funct3)
     {
-    case 0b000: // ADD
+    case rv64_op64_add:
     {
         val = val1 + val2;
         break;
     }
-    case 0b100000000: // SUB
+    case rv64_op64_sub:
     {
         val = val1 - val2;
         break;
     }
-    case 0b001: // SLL
+    case rv64_op64_sll:
     {
         val = riscvm_shl_int64(val1, val2 & 0x1f);
         break;
     }
-    case 0b010: // SLT
+    case rv64_op64_slt:
     {
         if (val1 < val2)
         {
@@ -665,7 +665,7 @@ ALWAYS_INLINE static bool handler_rv64_op64(riscvm_ptr self, Instruction inst)
         }
         break;
     }
-    case 0b011: // SLTU
+    case rv64_op64_sltu:
     {
         if ((uint64_t)val1 < (uint64_t)val2)
         {
@@ -677,52 +677,52 @@ ALWAYS_INLINE static bool handler_rv64_op64(riscvm_ptr self, Instruction inst)
         }
         break;
     }
-    case 0b100: // XOR
+    case rv64_op64_xor:
     {
         val = val1 ^ val2;
         break;
     }
-    case 0b101: // SRL
+    case rv64_op64_srl:
     {
         val = riscvm_shr_int64(val1, val2 & 0x1f);
         break;
     }
-    case 0b100000101: // SRA
+    case rv64_op64_sra:
     {
         val = riscvm_asr_int64(val1, val2 & 0x1f);
         break;
     }
-    case 0b110: // OR
+    case rv64_op64_or:
     {
         val = val1 | val2;
         break;
     }
-    case 0b111: // AND
+    case rv64_op64_and:
     {
         val = val1 & val2;
         break;
     }
-    case 0b1000: // MUL
+    case rv64_op64_mul:
     {
         val = val1 * val2;
         break;
     }
-    case 0b1001: // MULH
+    case rv64_op64_mulh:
     {
         val = (int64_t)(uint64_t)riscvm_shr_int128((__int128)val1 * (__int128)val2, 64);
         break;
     }
-    case 0b1010: // MULHSU
+    case rv64_op64_mulhsu:
     {
         val = (int64_t)(uint64_t)riscvm_shr_int128((__int128)val1 * (__int128)(uint64_t)val2, 64);
         break;
     }
-    case 0b1011: // MULHU
+    case rv64_op64_mulhu:
     {
         val = (int64_t)(uint64_t)riscvm_shr_int128((__int128)(uint64_t)val1 * (__int128)(uint64_t)val2, 64);
         break;
     }
-    case 0b1100: // DIV
+    case rv64_op64_div:
     {
         int64_t dividend = val1;
         int64_t divisor  = val2;
@@ -740,7 +740,7 @@ ALWAYS_INLINE static bool handler_rv64_op64(riscvm_ptr self, Instruction inst)
         }
         break;
     }
-    case 0b1101: // DIVU
+    case rv64_op64_divu:
     {
         uint64_t dividend = (uint64_t)val1;
         uint64_t divisor  = (uint64_t)val2;
@@ -754,7 +754,7 @@ ALWAYS_INLINE static bool handler_rv64_op64(riscvm_ptr self, Instruction inst)
         }
         break;
     }
-    case 0b1110: // REM
+    case rv64_op64_rem:
     {
         int64_t dividend = val1;
         int64_t divisor  = val2;
@@ -772,7 +772,7 @@ ALWAYS_INLINE static bool handler_rv64_op64(riscvm_ptr self, Instruction inst)
         }
         break;
     }
-    case 0b1111: // REMU
+    case rv64_op64_remu:
     {
         uint64_t dividend = (uint64_t)val1;
         uint64_t divisor  = (uint64_t)val2;
@@ -809,27 +809,27 @@ ALWAYS_INLINE static bool handler_rv64_op32(riscvm_ptr self, Instruction inst)
     int64_t val  = 0;
     switch ((inst.rtype.funct7 << 3) | inst.rtype.funct3)
     {
-    case 0b000: // ADDW
+    case rv64_op32_addw:
     {
         val = (int64_t)(int32_t)(val1 + val2);
         break;
     }
-    case 0b001: // SLLW
+    case rv64_op32_sllw:
     {
         val = (int64_t)(int32_t)riscvm_shl_int64(val1, (val2 & 0x1f));
         break;
     }
-    case 0b101: // SRLW
+    case rv64_op32_srlw:
     {
         val = (int64_t)(int32_t)riscvm_shr_int64(val1, (val2 & 0x1f));
         break;
     }
-    case 0b1000: // MULW
+    case rv64_op32_mulw:
     {
         val = (int64_t)((int32_t)val1 * (int32_t)val2);
         break;
     }
-    case 0b1100: // DIVW
+    case rv64_op32_divw:
     {
         int32_t dividend = (int32_t)val1;
         int32_t divisor  = (int32_t)val2;
@@ -847,7 +847,7 @@ ALWAYS_INLINE static bool handler_rv64_op32(riscvm_ptr self, Instruction inst)
         }
         break;
     }
-    case 0b1101: // DIVUW
+    case rv64_op32_divuw:
     {
         uint32_t dividend = (uint32_t)val1;
         uint32_t divisor  = (uint32_t)val2;
@@ -861,7 +861,7 @@ ALWAYS_INLINE static bool handler_rv64_op32(riscvm_ptr self, Instruction inst)
         }
         break;
     }
-    case 0b1110: // REMW
+    case rv64_op32_remw:
     {
         int32_t dividend = (int32_t)val1;
         int32_t divisor  = (int32_t)val2;
@@ -879,7 +879,7 @@ ALWAYS_INLINE static bool handler_rv64_op32(riscvm_ptr self, Instruction inst)
         }
         break;
     }
-    case 0b1111: // REMUW
+    case rv64_op32_remuw:
     {
         uint32_t dividend = (uint32_t)val1;
         uint32_t divisor  = (uint32_t)val2;
@@ -893,12 +893,12 @@ ALWAYS_INLINE static bool handler_rv64_op32(riscvm_ptr self, Instruction inst)
         }
         break;
     }
-    case 0b100000101: // SRAW
+    case rv64_op32_sraw:
     {
         val = (int64_t)(int32_t)riscvm_asr_int64(val1, val2 & 0x1f);
         break;
     }
-    case 0b100000000: // SUBW
+    case rv64_op32_subw:
     {
         val = (int64_t)(int32_t)(val1 - val2);
         break;
@@ -987,32 +987,32 @@ ALWAYS_INLINE static bool handler_rv64_branch(riscvm_ptr self, Instruction inst)
 
     switch (inst.sbtype.funct3)
     {
-    case 0b000: // beq
+    case rv64_branch_beq:
     {
         cond = val1 == val2;
         break;
     }
-    case 0b001: // bne
+    case rv64_branch_bne:
     {
         cond = val1 != val2;
         break;
     }
-    case 0b100: // blt
+    case rv64_branch_blt:
     {
         cond = (int64_t)val1 < (int64_t)val2;
         break;
     }
-    case 0b101: // bge
+    case rv64_branch_bge:
     {
         cond = (int64_t)val1 >= (int64_t)val2;
         break;
     }
-    case 0b110: // bltu
+    case rv64_branch_bltu:
     {
         cond = val1 < val2;
         break;
     }
-    case 0b111: // bgeu
+    case rv64_branch_bgeu:
     {
         cond = val1 >= val2;
         break;

@@ -52,19 +52,13 @@ def get_link_base(sections):
     return None
 
 def get_functions(sections, link_base):
-    functions = []
-    for section_name, section_data in sections.items():
-        if section_name == ".text":
-            for symbol in section_data['symbols']:
-                # Only valid functions
-                if symbol['align'] == '1' and symbol['size'] != '0':
-                    functions.append({
-                        'symbol': symbol['symbol'],
-                        'size': int(symbol['size'], 16),
-                        'address': int(symbol['vma'], 16) - link_base,
-                        'vma': int(symbol['vma'], 16),
-                    })
-    return functions
+    symbols = sections.get(".text", {}).get('symbols', [])
+    return [{
+        'symbol': s['symbol'],
+        'size': int(s['size'], 16),
+        'address': int(s['vma'], 16) - link_base,
+        'vma': int(s['vma'], 16),
+    } for s in symbols if s['align'] == '1' and s['size'] != '0']
 
 def tetra_twist(data: bytes) -> int:
     """
@@ -97,26 +91,59 @@ def transform(offset: int, key: int) -> int:
     return tetra_twist(struct.pack("<I", key2))
 
 def replace_opcode(instruction, shuffled):
-    # Extract the opcode from the instruction
+    """Replaces the opcode in the instruction with the shuffled opcode"""
     original_opcode = (instruction >> 2) & 0b11111
-    # Get the new opcode from the shuffled_dict
     new_opcode = shuffled[original_opcode]
-    # Clear out the original opcode from the instruction
     instruction &= ~(0b11111 << 2)
-    # Insert the new opcode
     instruction |= (new_opcode << 2)
     return instruction
 
-def process_function(encrypt: bool, data: bytearray, function: dict, key: int, shuffled: dict = None):
+def replace_func3(instruction, shuffled):
+    """Replaces the func3 in the instruction with the shuffled func3"""
+    original_func3 = (instruction >> 12) & 0b111
+    new_func3 = shuffled[original_func3]
+    instruction &= ~(0b111 << 12)       # null func3
+    instruction |= (new_func3 << 12)    # insert new func3
+    return instruction
+
+def replace_func3_func7(instruction, shuffled):
+    """Replaces the func3 and func7 in the instruction with the shuffled func3 and func7"""
+    # func3 is bits 12-14 and func7 is bits 25-31, combine them into a single value
+    original_func3_func7 = ((instruction >> 12) & 0b111) | ((instruction >> 25) & 0b1111111) << 3
+    new_func3_func7 = shuffled[original_func3_func7]
+    instruction &= ~(0b111 << 12)                   # null func3
+    instruction &= ~(0b1111111 << 25)               # null func7
+    instruction |= (new_func3_func7 & 0b111) << 12  # insert new func3
+    instruction |= (new_func3_func7 >> 3) << 25     # insert new func7
+    return instruction
+
+def shuffle_operands(instruction, shuffled, opcodes):
+    """
+    Shuffles the operands in the instruction based on the opcode.
+    If instruction contains a function it will be shuffled as well.
+    """
+    opcode = (instruction >> 2) & 0b11111
+    assert opcodes["rv64_opcodes"][opcode] != "invalid", "Invalid opcode"
+    opcode_name = f"rv64_{opcodes['rv64_opcodes'][opcode]}"
+    if opcode_name in opcodes:
+        # shuffle function for this instruction 
+        if opcode_name in ["rv64_imm64", "rv64_imm32", "rv64_load", "rv64_store", "rv64_branch"]:
+            instruction = replace_func3(instruction, shuffled[opcode_name])
+        elif opcode_name in ["rv64_op64", "rv64_op32"]:
+            instruction = replace_func3_func7(instruction, shuffled[opcode_name])
+    instruction = replace_opcode(instruction, shuffled["rv64_opcodes"])
+    return instruction
+
+def process_function(encrypt: bool, data: bytearray, function: dict, key: int, shuffled: dict = None, opcodes: dict = None):
     """Encrypts the provided function in place based on the function address and key."""
     print(f"Processing function {function['symbol']} at {hex(function['vma'])} with size {hex(function['size'])}")
     for i in range(0, function['size'], 4):
         offset = function['address'] + i
         dword, = struct.unpack("<I", data[offset:offset+4])
 
-        if shuffled is not None:
+        if shuffled is not None or opcodes is not None:
             # Shuffle the operands
-            dword = replace_opcode(dword, shuffled)
+            dword = shuffle_operands(dword, shuffled, opcodes)
         if encrypt:
             dword = dword ^ transform(offset, key)
         data[offset:offset+4] = struct.pack("<I", dword)
@@ -130,12 +157,14 @@ def main():
     parser.add_argument("--output", "-o", help="Output binary file", required=True)
     parser.add_argument("--key", "-k", help="Encryption key (hex, int)", default="0xDEADBEEF")
     parser.add_argument("--shuffle-map", "-sm", help="Shuffle map file")
+    parser.add_argument("--opcodes-map", "-om", help="Opcodes map file")
 
     args = parser.parse_args()
     input: str = args.input
     map_file: str = args.map
     output: str = args.output
     shuffle_json: str = args.shuffle_map
+    opcodes_json: str = args.opcodes_map
     shuffle: bool = args.shuffle
     encrypt: bool = args.encrypt
 
@@ -169,17 +198,34 @@ def main():
         binary = bytearray(f.read())
 
     shuffle_map = None
+    opcode_map = None
+    
     if shuffle:
         if shuffle_json is None:
             print("Shuffle map file required when shuffling")
             sys.exit(1)
+        if opcodes_json is None:
+            print("Opcodes map file required when shuffling")
+            sys.exit(1)
         with open(shuffle_json, "r") as f:
             shuffle_map = json.load(f)
-            shuffle_map = {int(k): int(v) for k, v in shuffle_map.items()}
+            # layout is { "rv64_opcodes": { "1": 0, ... }, "rv64_op64": { "1": 0, ... }, }
+            # convert the number strings to ints
+            shuffle_map = {k: {int(k2): v2 for k2, v2 in v.items()} for k, v in shuffle_map.items()}
 
+        with open(opcodes_json, "r") as f:
+            opcode_map = json.load(f)
+            # layout is { "rv64_opcodes": { "1": "add", ... }, "rv64_op64": { "1": "addw", ... }, }
+            # convert the number strings to ints
+            opcode_map = {k: {int(k2): v2 for k2, v2 in v.items()} for k, v in opcode_map.items()}
+        
+        if shuffle_map is None or opcode_map is None:
+            print("Could not load shuffle or opcode map")
+            sys.exit(1)
+            
     # Encrypt the functions
     for function in functions:
-        process_function(encrypt, binary, function, key, shuffle_map)
+        process_function(encrypt, binary, function, key, shuffle_map, opcode_map)
 
     # Walk and verify the relocations
     rela_offset = binary.rfind(b"RELA")
