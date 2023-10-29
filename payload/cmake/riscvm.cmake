@@ -74,13 +74,17 @@ execute_process(
 
 function(add_riscvm_executable tgt)
     add_executable(${tgt} ${ARGN})
+    if(MSVC)
+        target_compile_definitions(${tgt} PRIVATE _NO_CRT_STDIO_INLINE)
+        target_compile_options(${tgt} PRIVATE /GS- /Zc:threadSafeInit-)
+    endif()
     set(BC_BASE "$<TARGET_FILE_DIR:${tgt}>/$<TARGET_FILE_BASE_NAME:${tgt}>")
     add_custom_command(TARGET ${tgt}
         POST_BUILD
         USES_TERMINAL
         COMMENT "Extracting and transpiling bitcode..."
-        COMMAND "${Python3_EXECUTABLE}" "${RISCVM_DIR}/extract-bc.py" "$<TARGET_FILE:${tgt}>" -o "${BC_BASE}.bc"
-        COMMAND "${TRANSPILER}" -input "${BC_BASE}.bc" -output "${BC_BASE}.rv64.bc"
+        COMMAND "${Python3_EXECUTABLE}" "${RISCVM_DIR}/extract-bc.py" "$<TARGET_FILE:${tgt}>" -o "${BC_BASE}.bc" --importmap "${BC_BASE}.imports"
+        COMMAND "${TRANSPILER}" -input "${BC_BASE}.bc" -importmap "${BC_BASE}.imports" -output "${BC_BASE}.rv64.bc"
         COMMAND "${CLANG_EXECUTABLE}" ${RV64_FLAGS} -c "${BC_BASE}.rv64.bc" -o "${BC_BASE}.rv64.o"
         COMMAND "${LLD_EXECUTABLE}" -o "${BC_BASE}.elf" --oformat=elf -emit-relocs -T "${RISCVM_DIR}/lib/linker.ld" "--Map=${BC_BASE}.map" "${CRT0_OBJ}" "${BC_BASE}.rv64.o"
         COMMAND "${OBJCOPY_EXECUTABLE}" -O binary "${BC_BASE}.elf" "${BC_BASE}.pre.bin"
