@@ -140,9 +140,8 @@ static void HandleImports(Module& module, const std::vector<Function*> importedF
         auto valueName = name + "_base";
         if (alwaysLoadedHashes.count(hash))
         {
-            auto base = resolveBuilder.CreateCall(
-                resolveDllFn, {ConstantInt::get(int32Ty, hash_module("kernel32.dll"))}, valueName
-            );
+            auto base =
+                resolveBuilder.CreateCall(resolveDllFn, {ConstantInt::get(int32Ty, hash_module(name.c_str()))}, valueName);
             baseValues.emplace(hash, base);
             return base;
         }
