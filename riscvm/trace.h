@@ -338,7 +338,7 @@ void trace_op32(riscvm_ptr self, Instruction inst, char* buffer)
     }
 
     TO_SIGNED_HEX_32(val);
-    sprintf(buffer, "%-8s %s, %s, %s = 0x%x", memnomic, ra, reg1, reg2, buf_val);
+    sprintf(buffer, "%-8s %s, %s, %s = %s", memnomic, ra, reg1, reg2, buf_val);
 }
 
 void trace_fence(riscvm_ptr self, Instruction inst, char* buffer)
@@ -599,14 +599,16 @@ void riscvm_trace(riscvm_ptr self, Instruction inst)
         return;
     }
 
-    printf("[trace] 0x%016llx: ", self->pc);
+    fprintf(self->trace, "[trace] 0x%016llx: ", self->pc);
 
     for (int i = 0; i < calldepth; i++)
     {
-        printf("  ");
+        fprintf(self->trace, "  ");
     }
 
-    printf("%s\n", buffer);
+    fprintf(self->trace, "%s\n", buffer);
+
+    fflush(self->trace);
 }
 
 #else

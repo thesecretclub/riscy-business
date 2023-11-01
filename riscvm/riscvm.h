@@ -72,6 +72,10 @@ struct riscvm
     uint64_t regs[32];
     int64_t  exitcode;
 
+#ifdef _DEBUG
+    FILE* trace;
+#endif // _DEBUG
+
 #ifdef CODE_ENCRYPTION
     int64_t  base;
     uint32_t key;
