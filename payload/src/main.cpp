@@ -1,32 +1,27 @@
-#include "phnt.h"
+#include <phnt.h>
 #include <cstdint>
 #include <cstdio>
 
-void* operator new( size_t size )
+#include <vector.hpp>
+
+void vector_test()
 {
-    HANDLE heap = RtlGetCurrentPeb()->ProcessHeap;
-    return RtlAllocateHeap(heap, HEAP_ZERO_MEMORY, size);
+    itlib::pod_vector<const char*> test;
+
+    test.push_back("hello");
+    test.push_back("world");
+    test.push_back("vector");
+    test.push_back("is");
+    test.push_back("working");
+    test.push_back("!!!");
+
+    for (auto& str : test)
+    {
+        puts(str);
+    }
 }
 
-void* operator new[]( size_t size )
-{
-    HANDLE heap = RtlGetCurrentPeb()->ProcessHeap;
-    return RtlAllocateHeap(heap, HEAP_ZERO_MEMORY, size);
-}
-
-void operator delete( void* ptr )
-{
-    HANDLE heap = RtlGetCurrentPeb()->ProcessHeap;
-    RtlFreeHeap(heap, 0, ptr);
-}
-
-void operator delete[]( void* ptr )
-{
-    HANDLE heap = RtlGetCurrentPeb()->ProcessHeap;
-    RtlFreeHeap(heap, 0, ptr);
-}
-
-int main(int argc, char** argv)
+void message_box_test()
 {
     auto test = new uint8_t[0x1000000];
     // use heap to allocate memory
@@ -42,4 +37,11 @@ int main(int argc, char** argv)
     }
 
     delete[] test;
+}
+
+int main(int argc, char** argv)
+{
+    vector_test();
+    message_box_test();
+    return 1337;
 }
