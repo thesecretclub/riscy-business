@@ -157,7 +157,6 @@ ALWAYS_INLINE static bool riscvm_handle_syscall(riscvm_ptr self, uint64_t code, 
     {
     case 10000: // exit
     {
-        self->exitcode = reg_read(reg_a0);
         return false;
     }
 
@@ -476,10 +475,7 @@ ALWAYS_INLINE static bool handler_rv64_load(riscvm_ptr self, Instruction inst)
     }
     }
 
-    if (LIKELY(inst.itype.rd != reg_zero))
-    {
-        reg_write(inst.itype.rd, (uint64_t)val);
-    }
+    reg_write(inst.itype.rd, (uint64_t)val);
 
     self->pc += 4;
     dispatch();
@@ -597,10 +593,7 @@ ALWAYS_INLINE static bool handler_rv64_imm64(riscvm_ptr self, Instruction inst)
     }
     }
 
-    if (LIKELY(inst.itype.rd != reg_zero))
-    {
-        reg_write(inst.itype.rd, val);
-    }
+    reg_write(inst.itype.rd, val);
 
     self->pc += 4;
     dispatch();
@@ -641,10 +634,7 @@ ALWAYS_INLINE static bool handler_rv64_imm32(riscvm_ptr self, Instruction inst)
     }
     }
 
-    if (LIKELY(inst.itype.rd != reg_zero))
-    {
-        reg_write(inst.itype.rd, val);
-    }
+    reg_write(inst.itype.rd, val);
 
     self->pc += 4;
     dispatch();
@@ -812,10 +802,7 @@ ALWAYS_INLINE static bool handler_rv64_op64(riscvm_ptr self, Instruction inst)
     }
     }
 
-    if (LIKELY(inst.rtype.rd != reg_zero))
-    {
-        reg_write(inst.rtype.rd, val);
-    }
+    reg_write(inst.rtype.rd, val);
 
     self->pc += 4;
     dispatch();
@@ -929,10 +916,7 @@ ALWAYS_INLINE static bool handler_rv64_op32(riscvm_ptr self, Instruction inst)
     }
     }
 
-    if (LIKELY(inst.rtype.rd != reg_zero))
-    {
-        reg_write(inst.rtype.rd, val);
-    }
+    reg_write(inst.rtype.rd, val);
 
     self->pc += 4;
     dispatch();
@@ -941,10 +925,7 @@ ALWAYS_INLINE static bool handler_rv64_op32(riscvm_ptr self, Instruction inst)
 ALWAYS_INLINE static bool handler_rv64_lui(riscvm_ptr self, Instruction inst)
 {
     int64_t imm = bit_signer(inst.utype.imm, 20) << 12;
-    if (LIKELY(inst.utype.rd != reg_zero))
-    {
-        reg_write(inst.utype.rd, imm);
-    }
+    reg_write(inst.utype.rd, imm);
 
     self->pc += 4;
     dispatch();
@@ -953,10 +934,7 @@ ALWAYS_INLINE static bool handler_rv64_lui(riscvm_ptr self, Instruction inst)
 ALWAYS_INLINE static bool handler_rv64_auipc(riscvm_ptr self, Instruction inst)
 {
     int64_t imm = bit_signer(inst.utype.imm, 20) << 12;
-    if (LIKELY(inst.utype.rd != reg_zero))
-    {
-        reg_write(inst.utype.rd, self->pc + imm);
-    }
+    reg_write(inst.utype.rd, self->pc + imm);
 
     self->pc += 4;
     dispatch();
@@ -970,10 +948,7 @@ ALWAYS_INLINE static bool handler_rv64_jal(riscvm_ptr self, Instruction inst)
         20
     );
 
-    if (LIKELY(inst.ujtype.rd != reg_zero))
-    {
-        reg_write(inst.ujtype.rd, self->pc + 4);
-    }
+    reg_write(inst.ujtype.rd, self->pc + 4);
 
     self->pc += imm;
     dispatch();
@@ -981,10 +956,7 @@ ALWAYS_INLINE static bool handler_rv64_jal(riscvm_ptr self, Instruction inst)
 
 ALWAYS_INLINE static bool handler_rv64_jalr(riscvm_ptr self, Instruction inst)
 {
-    if (UNLIKELY(inst.itype.rd != reg_zero))
-    {
-        reg_write(inst.itype.rd, self->pc + 4);
-    }
+    reg_write(inst.itype.rd, self->pc + 4);
 
     self->pc = (int64_t)(reg_read(inst.itype.rs1) + inst.itype.imm) & -2;
     dispatch();
@@ -1077,7 +1049,7 @@ ALWAYS_INLINE static bool handler_rv64_system(riscvm_ptr self, Instruction inst)
     }
     case 0b000000000001: // ebreak
     {
-        self->exitcode = -1;
+        reg_write(reg_a0, -1);
         return false;
     }
     default:
@@ -1230,7 +1202,7 @@ int main(int argc, char** argv)
 #endif
 
     riscvm_run(machine);
-    exit((int)machine->exitcode);
+    exit((int)machine->regs[reg_a0]);
 
 #ifdef _DEBUG
     if (g_trace)

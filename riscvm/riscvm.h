@@ -6,7 +6,7 @@
 #ifdef _DEBUG
 
 #define HAS_TRACE
-static bool g_trace           = false;
+static bool g_trace = false;
 
 #define ALWAYS_INLINE
 #define NEVER_INLINE
@@ -64,13 +64,19 @@ static bool g_trace           = false;
 
 #define reg_read(idx) (int64_t) self->regs[idx]
 
-#define reg_write(idx, value) self->regs[idx] = value
+#define reg_write(idx, value)        \
+    do                               \
+    {                                \
+        if (LIKELY(idx != reg_zero)) \
+        {                            \
+            self->regs[idx] = value; \
+        }                            \
+    } while (0)
 
 struct riscvm
 {
     int64_t  pc;
     uint64_t regs[32];
-    int64_t  exitcode;
 
 #ifdef _DEBUG
     FILE* trace;
