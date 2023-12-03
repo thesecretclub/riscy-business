@@ -7,16 +7,31 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdlib.h>
+
+#if defined(_MSC_VER)
 #include <intrin.h>
+#elif defined(__clang__)
+#define __debugbreak() __builtin_debugtrap()
+#elif defined(__GNUC__)
+#define __debugbreak() __builtin_trap()
+#else
+#warning Unsupported platform/compiler
+#include <signal.h>
+#define __debugbreak() raise(SIGTRAP)
+#endif // _MSC_VER
 
 #include "riscvm.h"
 #include "trace.h"
 
+#ifdef _WIN32
 #pragma section(".vmcode", read, write)
 __declspec(align(4096)) uint8_t g_code[0x10000];
-
 #pragma section(".vmstack", read, write)
 __declspec(align(4096)) uint8_t g_stack[0x10000];
+#else
+uint8_t g_code[0x10000] __attribute__((aligned(0x1000)));
+uint8_t g_stack[0x10000] __attribute__((aligned(0x1000)));
+#endif // _WIN32
 
 void riscvm_loadfile(riscvm_ptr self, const char* filename)
 {
@@ -231,7 +246,7 @@ ALWAYS_INLINE static bool riscvm_handle_syscall(riscvm_ptr self, uint64_t code, 
         uint64_t  func_addr = reg_read(reg_a0);
         uint64_t* args      = (uint64_t*)riscvm_getptr(self, reg_read(reg_a1));
 
-        using syscall_fn = uint64_t(__fastcall*)(
+        using syscall_fn = uint64_t (*)(
             uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t
         );
 
@@ -255,7 +270,11 @@ ALWAYS_INLINE static bool riscvm_handle_syscall(riscvm_ptr self, uint64_t code, 
 
     case 20001: // get_peb
     {
+#ifdef _WIN32
         result = __readgsqword(0x60);
+#else
+#warning get_peb unsupported on this platform
+#endif // _WIN32
         break;
     }
 
