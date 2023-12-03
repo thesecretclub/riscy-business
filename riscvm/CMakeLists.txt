@@ -82,6 +82,13 @@ if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIAN
 	)
 endif()
 
+if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang
+	target_compile_options(riscvm PRIVATE
+		-fno-jump-tables
+		-mno-sse
+	)
+endif()
+
 if(MSVC) # msvc
 	target_link_options(riscvm PRIVATE
 		"/DYNAMICBASE:NO"
