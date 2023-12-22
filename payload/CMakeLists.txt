@@ -44,7 +44,7 @@ if(POLICY CMP0135)
 	cmake_policy(SET CMP0135 NEW)
 endif()
 message(STATUS "Fetching phnt...")
-FetchContent_Declare(phnt SYSTEM
+FetchContent_Declare(phnt
 	URL
 		"https://github.com/mrexodia/phnt-single-header/releases/download/v1.2-4d1b102f/phnt.zip"
 )

@@ -31,7 +31,7 @@ cmake -B build -DCMAKE_PREFIX_PATH=c:/llvm-install
 cmake --build build --config RelWithDebInfo
 ```
 
-The `llvm-install` is a regular LLVM installation. This should match the version of Clang used by Visual Studio (sometimes it can be later).
+The `llvm-install` is a regular LLVM installation. This should match the version of Clang used by Visual Studio (sometimes it can be later). You can use a precompiled [llvm-17.0.2-win64.7z](https://github.com/thesecretclub/riscy-business/releases/download/transpiler-v0.3/llvm-17.0.2-win64.7z) if you want to save some time building LLVM.
 
 ## payload
 
