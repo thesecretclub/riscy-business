@@ -2,6 +2,8 @@
 
 ![logo](.github/logo.png)
 
+**Article: [RISC-Y Business: Raging against the reduced machine](secret.club/2023/12/24/riscy-business.html).**
+
 ## Prerequisites
 
 - Visual Studio 2022 with the `C++ Clang Compiler for Windows (16.0.5)` component
