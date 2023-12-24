@@ -2,7 +2,7 @@
 
 ![logo](.github/logo.png)
 
-**Article: [RISC-Y Business: Raging against the reduced machine](secret.club/2023/12/24/riscy-business.html).**
+**Article: [RISC-Y Business: Raging against the reduced machine](https://secret.club/2023/12/24/riscy-business.html).**
 
 ## Prerequisites
 
