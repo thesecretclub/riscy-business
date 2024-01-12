@@ -26,7 +26,7 @@ int g_calldepth = 0;
 
 void trace_load(riscvm_ptr self, Instruction inst, char* buffer)
 {
-    uint32_t imm  = inst.itype.imm;
+    int32_t  imm  = bit_signer(inst.itype.imm, 12);
     uint64_t addr = reg_read(inst.itype.rs1) + imm;
     int64_t  val  = 0;
 
@@ -348,8 +348,8 @@ void trace_fence(riscvm_ptr self, Instruction inst, char* buffer)
 
 void trace_auipc(riscvm_ptr self, Instruction inst, char* buffer)
 {
-    int32_t imm = bit_signer(inst.utype.imm, 32);
-    int64_t val = reg_read(inst.utype.rd);
+    int32_t imm = inst.utype.imm;
+    int64_t val = self->pc + (bit_signer(imm, 20) << 12);
 
     const char* memnomic = "auipc";
     const char* ra       = reg_names[inst.utype.rd];
@@ -406,8 +406,8 @@ void trace_store(riscvm_ptr self, Instruction inst, char* buffer)
 
 void trace_lui(riscvm_ptr self, Instruction inst, char* buffer)
 {
-    int32_t imm = bit_signer(inst.utype.imm, 32);
-    int64_t val = reg_read(inst.utype.rd);
+    int32_t imm = inst.utype.imm;
+    int64_t val = bit_signer(imm, 20) << 12;
 
     const char* memnomic = "lui";
     const char* ra       = reg_names[inst.utype.rd];

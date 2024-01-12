@@ -429,7 +429,7 @@ static constexpr std::array<riscvm_handler_t, 32> riscvm_handlers = []
 
 ALWAYS_INLINE static bool handler_rv64_load(riscvm_ptr self, Instruction inst)
 {
-    uint64_t addr = reg_read(inst.itype.rs1) + inst.itype.imm;
+    uint64_t addr = reg_read(inst.itype.rs1) + bit_signer(inst.itype.imm, 12);
     int64_t  val  = 0;
     switch (inst.itype.funct3)
     {
