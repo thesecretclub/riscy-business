@@ -382,6 +382,10 @@ static void ProcessModule(Module& module, const ImportMap& importmap)
                         );
                     }
                 }
+                else if (isa<InvokeInst>(&instruction))
+                {
+                    throw std::runtime_error("C++ exceptions are not supported!");
+                }
             }
         }
     }
