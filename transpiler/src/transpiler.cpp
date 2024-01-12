@@ -392,6 +392,27 @@ static void ProcessModule(Module& module, const ImportMap& importmap)
 
     HandleImports(module, importedFunctions, importmap);
 
+    // NOTE: enable if encountered
+#if 0
+    auto imageBase = module.getGlobalVariable("__ImageBase");
+    if (imageBase != nullptr)
+    {
+        for (const Use& use : imageBase->uses())
+        {
+            auto user = use.getUser();
+            if (auto op = dyn_cast<ConcreteOperator<Operator, Instruction::PtrToInt>>(user))
+            {
+                user->replaceAllUsesWith(llvm::ConstantInt::get(user->getType(), 0x8000000));
+            }
+            else
+            {
+                llvm::outs() << "UNSUPPORTED: " << *user << "\n";
+                throw std::runtime_error("Unsupported user of __ImageBase");
+            }
+        }
+    }
+#endif
+
     for (GlobalVariable& global : module.globals())
     {
         auto demangledName = demangle(global.getName());
