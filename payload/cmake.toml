@@ -5,17 +5,15 @@ cmkr-include = "cmake/cmkr.cmake"
 
 [project]
 name = "payload"
-languages = ["CXX"]
 cmake-before = "set(CMAKE_CONFIGURATION_TYPES Debug Release)"
 include-after = ["cmake/riscvm.cmake"]
 msvc-runtime = "static"
 
-[fetch-content.phnt]
-url = "https://github.com/mrexodia/phnt-single-header/releases/download/v1.2-4d1b102f/phnt.zip"
-
 [template.riscvm]
 type = "executable"
 add-function = "add_riscvm_executable"
+compile-options = ["/GR-", "/EHs-"]
+compile-definitions = ["_HAS_EXCEPTIONS=0"]
 
 # Windows implementation of the riscvm syscalls (for debugging only)
 [target.riscvm-crt0]
@@ -25,19 +23,22 @@ sources = ["crt/riscvm-crt0.cpp"]
 [target.payload]
 type = "riscvm"
 sources = [
-	"src/main.cpp",
-	"crt/minicrt.c",
-	"crt/minicrt.cpp",
+    "src/main.cpp",
+    "crt/minicrt.c",
+    "crt/minicrt.cpp",
+]
+headers = [
+    "include/phnt.h",
 ]
 include-directories = [
-	"include",
+    "include",
 ]
 link-libraries = [
     "riscvm-crt0",
-	"phnt::phnt",
+    "ntdll.lib",
 ]
 compile-features = ["cxx_std_17"]
 msvc.link-options = [
-	"/INCREMENTAL:NO",
-	"/DEBUG",
+    "/INCREMENTAL:NO",
+    "/DEBUG",
 ]

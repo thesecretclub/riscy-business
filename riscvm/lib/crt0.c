@@ -378,9 +378,76 @@ void riscvm_imports()
 
 void* memset(void* dest, int ch, uintptr_t count)
 {
+    // TODO: replace with ntdll import?
     for (uintptr_t i = 0; i < count; i++)
     {
         ((uint8_t*)dest)[i] = ch;
     }
     return dest;
+}
+
+void* memcpy(void* dest, const void* src, size_t count)
+{
+    // TODO: replace with ntdll import?
+    for (size_t i = 0; i < count; i++)
+    {
+        ((uint8_t*)dest)[i] = ((uint8_t*)src)[i];
+    }
+    return dest;
+}
+
+void* memmove(void* dest, const void* src, uintptr_t count)
+{
+    // TODO: replace with ntdll import?
+    if (dest < src)
+    {
+        for (uintptr_t i = 0; i < count; i++)
+        {
+            ((uint8_t*)dest)[i] = ((uint8_t*)src)[i];
+        }
+    }
+    else
+    {
+        for (uintptr_t i = count; i > 0; i--)
+        {
+            ((uint8_t*)dest)[i - 1] = ((uint8_t*)src)[i - 1];
+        }
+    }
+    return dest;
+}
+
+// https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/invalid-parameter-functions
+
+void _invalid_parameter(
+    wchar_t const* const expression,
+    wchar_t const* const function_name,
+    wchar_t const* const file_name,
+    unsigned int const   line_number,
+    uintptr_t const      reserved
+)
+{
+    asm volatile("ebreak");
+}
+
+void _invalid_parameter_noinfo(void)
+{
+    asm volatile("ebreak");
+}
+
+void _invalid_parameter_noinfo_noreturn(void)
+{
+    asm volatile("ebreak");
+}
+
+void _invoke_watson(const wchar_t* a, const wchar_t* b, const wchar_t* c, uint32_t d, uintptr_t e)
+{
+    asm volatile("ebreak");
+}
+
+// https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/crtdbgreport-crtdbgreportw
+
+int _CrtDbgReport(int reportType, const char* filename, int linenumber, const char* moduleName, const char* format, ...)
+{
+    asm volatile("ebreak");
+    return 0;
 }

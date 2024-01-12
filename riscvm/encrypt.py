@@ -126,7 +126,7 @@ def shuffle_operands(instruction, shuffled, opcodes):
     assert opcodes["rv64_opcodes"][opcode] != "invalid", "Invalid opcode"
     opcode_name = f"rv64_{opcodes['rv64_opcodes'][opcode]}"
     if opcode_name in opcodes:
-        # shuffle function for this instruction 
+        # shuffle function for this instruction
         if opcode_name in ["rv64_imm64", "rv64_imm32", "rv64_load", "rv64_store", "rv64_branch"]:
             instruction = replace_func3(instruction, shuffled[opcode_name])
         elif opcode_name in ["rv64_op64", "rv64_op32"]:
@@ -185,7 +185,7 @@ def main():
 
     shuffle_map = None
     opcode_map = None
-    
+
     if shuffle:
         if shuffle_json is None:
             print("Shuffle map file required when shuffling")
@@ -204,11 +204,11 @@ def main():
             # layout is { "rv64_opcodes": { "1": "add", ... }, "rv64_op64": { "1": "addw", ... }, }
             # convert the number strings to ints
             opcode_map = {k: {int(k2): v2 for k2, v2 in v.items()} for k, v in opcode_map.items()}
-        
+
         if shuffle_map is None or opcode_map is None:
             print("Could not load shuffle or opcode map")
             sys.exit(1)
-            
+
     # Encrypt the functions
     for function in functions:
         print(f"Processing function {function['symbol']} at {hex(function['vma'])} with size {hex(function['size'])}")

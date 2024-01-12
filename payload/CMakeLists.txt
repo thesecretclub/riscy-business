@@ -30,25 +30,9 @@ endif()
 
 set(CMAKE_CONFIGURATION_TYPES Debug Release)
 
-project(payload
-	LANGUAGES
-		CXX
-)
+project(payload)
 
 include("cmake/riscvm.cmake")
-
-include(FetchContent)
-
-# Fix warnings about DOWNLOAD_EXTRACT_TIMESTAMP
-if(POLICY CMP0135)
-	cmake_policy(SET CMP0135 NEW)
-endif()
-message(STATUS "Fetching phnt...")
-FetchContent_Declare(phnt
-	URL
-		"https://github.com/mrexodia/phnt-single-header/releases/download/v1.2-4d1b102f/phnt.zip"
-)
-FetchContent_MakeAvailable(phnt)
 
 # Target: riscvm-crt0
 set(riscvm-crt0_SOURCES
@@ -66,6 +50,7 @@ set(payload_SOURCES
 	"src/main.cpp"
 	"crt/minicrt.c"
 	"crt/minicrt.cpp"
+	"include/phnt.h"
 	cmake.toml
 )
 
@@ -73,6 +58,15 @@ add_riscvm_executable(payload)
 
 target_sources(payload PRIVATE ${payload_SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${payload_SOURCES})
+
+target_compile_definitions(payload PRIVATE
+	_HAS_EXCEPTIONS=0
+)
+
+target_compile_options(payload PRIVATE
+	"/GR-"
+	"/EHs-"
+)
 
 target_compile_features(payload PRIVATE
 	cxx_std_17
@@ -84,7 +78,7 @@ target_include_directories(payload PRIVATE
 
 target_link_libraries(payload PRIVATE
 	riscvm-crt0
-	phnt::phnt
+	ntdll.lib
 )
 
 if(MSVC) # msvc

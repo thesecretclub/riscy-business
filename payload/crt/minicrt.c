@@ -1,4 +1,6 @@
+#include <assert.h>
 #include <phnt.h>
+#include <malloc.h>
 
 void* __cdecl malloc(size_t size)
 {
@@ -6,11 +8,13 @@ void* __cdecl malloc(size_t size)
     return RtlAllocateHeap(heap, HEAP_ZERO_MEMORY, size);
 }
 
+#ifndef _DEBUG
 void* __cdecl _expand(void* block, size_t size)
 {
     HANDLE heap = RtlGetCurrentPeb()->ProcessHeap;
     return RtlReAllocateHeap(heap, HEAP_ZERO_MEMORY, block, size);
 }
+#endif
 
 void __cdecl free(void* block)
 {
@@ -28,10 +32,11 @@ void* __cdecl realloc(void* block, size_t size)
     return _expand(block, size);
 }
 
-int __cdecl puts(const char * s) {
-    DWORD cbWritten;
-    HANDLE hStdOut = GetStdHandle( STD_OUTPUT_HANDLE );
-    WriteFile( hStdOut, s, lstrlen(s), &cbWritten, 0 );
-    WriteFile( hStdOut, "\n", 1, &cbWritten, 0 );
+int __cdecl puts(const char* s)
+{
+    DWORD  cbWritten;
+    HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    WriteFile(hStdOut, s, lstrlen(s), &cbWritten, 0);
+    WriteFile(hStdOut, "\n", 1, &cbWritten, 0);
     return (int)(cbWritten ? cbWritten : -1);
 }
