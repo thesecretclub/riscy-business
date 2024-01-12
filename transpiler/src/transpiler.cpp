@@ -425,8 +425,14 @@ static void ProcessModule(Module& module, const ImportMap& importmap)
     auto& comdatTable = module.getComdatSymbolTable();
     for (const auto& name : comdatTable.keys())
     {
-        const Comdat& comdat = comdatTable.at(name);
-        // TODO: match the demangled name
+        auto itr = comdatTable.find(name);
+        if (itr != comdatTable.end())
+        {
+            Comdat& comdat = itr->second;
+            comdat.setSelectionKind(Comdat::Any);
+        }
+
+        // TODO: match the demangled name?
     }
 
     auto meta = module.getNamedMetadata("llvm.linker.options");
