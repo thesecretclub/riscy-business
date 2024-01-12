@@ -140,8 +140,9 @@ static void HandleImports(Module& module, const std::vector<Function*> importedF
         auto valueName = name + "_base";
         if (alwaysLoadedHashes.count(hash))
         {
-            auto base =
-                resolveBuilder.CreateCall(resolveDllFn, {ConstantInt::get(int32Ty, hash_module(name.c_str()))}, valueName);
+            auto base = resolveBuilder.CreateCall(
+                resolveDllFn, {ConstantInt::get(int32Ty, hash_module(name.c_str()))}, valueName
+            );
             baseValues.emplace(hash, base);
             return base;
         }
@@ -184,7 +185,16 @@ static void HandleImports(Module& module, const std::vector<Function*> importedF
         }
 
         auto importDll = importmap.at(importName);
-        outs() << "[Import] " << importDll << ":" << importName << "\n";
+        if (function->getDLLStorageClass() != GlobalValue::DefaultStorageClass)
+        {
+            function->setDLLStorageClass(GlobalValue::DefaultStorageClass);
+            outs() << "[Import] ";
+        }
+        else
+        {
+            outs() << "[MSVCRT] ";
+        }
+        outs() << importDll << ":" << importName << "\n";
 
         if (function->isVarArg())
         {
@@ -195,7 +205,6 @@ static void HandleImports(Module& module, const std::vector<Function*> importedF
         auto ptr  = resolveBuilder.CreateCall(
             resolveImportFn, {base, ConstantInt::get(int32Ty, hash_import(importName.c_str()))}, "import_" + importName
         );
-
 
         auto importGlobal = new GlobalVariable(
             module,
@@ -334,11 +343,19 @@ static void ProcessModule(Module& module, const ImportMap& importmap)
         function.removeFnAttr("stack-protector-buffer-size");
 
         // Collect imported functions
-        if (function.hasDLLImportStorageClass() && !function.getName().startswith("riscvm_"))
+        auto name = function.getName();
+        if (function.hasDLLImportStorageClass() && !name.startswith("riscvm_"))
         {
             importedFunctions.push_back(&function);
         }
-        function.setDLLStorageClass(GlobalValue::DefaultStorageClass);
+        else if (function.isDeclaration() && importmap.count(name.str()) != 0)
+        {
+            importedFunctions.push_back(&function);
+        }
+        else
+        {
+            function.setDLLStorageClass(GlobalValue::DefaultStorageClass);
+        }
 
         // Handle PEB access
         for (BasicBlock& block : function)
