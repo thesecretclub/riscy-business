@@ -483,6 +483,8 @@ void trace_branch(riscvm_ptr self, Instruction inst, char* buffer)
 
 void trace_jalr(riscvm_ptr self, Instruction inst, char* buffer)
 {
+    int32_t imm = bit_signer(inst.itype.imm, 12);
+
     const char* memnomic = nullptr;
     const char* ra       = reg_names[inst.itype.rd];
     const char* reg1     = reg_names[inst.itype.rs1];
@@ -491,13 +493,12 @@ void trace_jalr(riscvm_ptr self, Instruction inst, char* buffer)
     {
         g_calldepth--;
         memnomic        = "ret";
-        int64_t retaddr = (int64_t)(reg_read(inst.itype.rs1) + inst.itype.imm) & -2;
+        int64_t retaddr = (int64_t)(reg_read(inst.itype.rs1) + imm) & ~1;
         sprintf(buffer, "%-8s (0x%llx)", memnomic, retaddr);
     }
     else
     {
         memnomic = "jalr";
-        uint32_t imm = inst.itype.imm;
         TO_SIGNED_HEX_32(imm);
         sprintf(buffer, "%-8s %s, %s(%s)", memnomic, ra, buf_imm, reg1);
     }

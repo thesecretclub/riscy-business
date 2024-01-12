@@ -956,9 +956,11 @@ ALWAYS_INLINE static bool handler_rv64_jal(riscvm_ptr self, Instruction inst)
 
 ALWAYS_INLINE static bool handler_rv64_jalr(riscvm_ptr self, Instruction inst)
 {
-    reg_write(inst.itype.rd, self->pc + 4);
+    auto    t   = self->pc + 4;
+    int32_t imm = bit_signer(inst.itype.imm, 12);
 
-    self->pc = (int64_t)(reg_read(inst.itype.rs1) + inst.itype.imm) & -2;
+    self->pc = (int64_t)(reg_read(inst.itype.rs1) + imm) & ~1;
+    reg_write(inst.itype.rd, t);
     dispatch();
 }
 
