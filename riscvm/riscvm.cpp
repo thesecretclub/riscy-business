@@ -74,7 +74,7 @@ void riscvm_loadfile(riscvm_ptr self, const char* filename)
         exit(EXIT_FAILURE);
 #else
         return;
-#endif
+#endif // CODE_ENCRYPTION || OPCODE_SHUFFLING
     }
 
 #ifdef OPCODE_SHUFFLING
@@ -1040,6 +1040,14 @@ ALWAYS_INLINE static bool handler_rv64_system(riscvm_ptr self, Instruction inst)
     {
     case 0b000000000000: // ecall
     {
+#ifdef _DEBUG
+        // Flush the trace in case the system call crashes
+        if (g_trace)
+        {
+            fflush(self->trace);
+        }
+#endif // _DEBUG
+
         uint64_t code   = reg_read(reg_a7);
         uint64_t result = 0;
         if (!riscvm_handle_syscall(self, code, result))
@@ -1174,12 +1182,12 @@ NEVER_INLINE void riscvm_run(riscvm_ptr self)
         {
             riscvm_trace(self, inst);
         }
-#endif
+#endif // _DEBUG
         if (!riscvm_execute(self, inst))
             break;
     }
 }
-#endif
+#endif // DIRECT_DISPATCH
 
 int main(int argc, char** argv)
 {
@@ -1199,7 +1207,7 @@ int main(int argc, char** argv)
         // TODO: allow custom trace file location/name
         machine->trace = fopen("trace.txt", "w");
     }
-#endif
+#endif // _DEBUG
 
     riscvm_run(machine);
     exit((int)machine->regs[reg_a0]);
@@ -1209,7 +1217,7 @@ int main(int argc, char** argv)
     {
         fclose(machine->trace);
     }
-#endif
+#endif // _DEBUG
 
     return EXIT_SUCCESS;
 }
