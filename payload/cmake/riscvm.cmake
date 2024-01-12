@@ -34,7 +34,7 @@ message(STATUS "Compiling RV64 CRT...")
 set(CRT0_SRC "${RISCVM_DIR}/lib/crt0.c")
 set(CRT0_OBJ "${CMAKE_CURRENT_BINARY_DIR}/crt0.o")
 configure_file("${CRT0_SRC}" crt0.c COPYONLY)
-set(RV64_FLAGS -target riscv64 -march=rv64g -fno-exceptions -mcmodel=medany -fshort-wchar -Os)
+set(RV64_FLAGS -target riscv64 -march=rv64im -mcmodel=medany -fno-exceptions -fshort-wchar -Os)
 execute_process(
     COMMAND "${CLANG_EXECUTABLE}" -x c ${RV64_FLAGS} -c "${CRT0_SRC}" -o "${CRT0_OBJ}"
     ECHO_OUTPUT_VARIABLE
