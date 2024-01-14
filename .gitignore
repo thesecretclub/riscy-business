@@ -1,5 +1,5 @@
 build*/
-/*venv*/
+*venv*/
 
 *.bin
 *.elf

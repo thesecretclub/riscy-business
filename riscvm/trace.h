@@ -600,7 +600,7 @@ void riscvm_trace(riscvm_ptr self, Instruction inst)
         return;
     }
 
-    fprintf(self->trace, "[trace] 0x%016llx: ", self->pc);
+    fprintf(self->trace, "[trace] 0x%llx: ", self->pc + self->rebase);
 
     for (int i = 0; i < calldepth; i++)
     {

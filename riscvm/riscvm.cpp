@@ -23,6 +23,8 @@
 #include "riscvm.h"
 #include "trace.h"
 
+bool g_trace;
+
 #ifdef _WIN32
 #pragma section(".vmcode", read, write)
 __declspec(align(4096)) uint8_t g_code[0x10000];
@@ -237,6 +239,11 @@ ALWAYS_INLINE static bool riscvm_handle_syscall(riscvm_ptr self, uint64_t code, 
     {
         printf("[syscall::print_tag_hex] %s: 0x%llx\n", (char*)reg_read(reg_a0), reg_read(reg_a1));
         break;
+    }
+
+    case 0x5d: // linux exit
+    {
+        return false;
     }
 #endif // DEBUG_SYSCALLS
 
@@ -1190,36 +1197,3 @@ NEVER_INLINE void riscvm_run(riscvm_ptr self)
     }
 }
 #endif // DIRECT_DISPATCH
-
-int main(int argc, char** argv)
-{
-    if (argc < 2)
-    {
-        log("please supply a RV64I program to run!\n");
-        return EXIT_FAILURE;
-    }
-    riscvm_ptr machine = (riscvm_ptr)malloc(sizeof(riscvm));
-    memset(machine, 0, sizeof(riscvm));
-    riscvm_loadfile(machine, argv[1]);
-
-#ifdef _DEBUG
-    g_trace = argc > 2 && _stricmp(argv[2], "--trace") == 0;
-    if (g_trace)
-    {
-        // TODO: allow custom trace file location/name
-        machine->trace = fopen("trace.txt", "w");
-    }
-#endif // _DEBUG
-
-    riscvm_run(machine);
-    exit((int)machine->regs[reg_a0]);
-
-#ifdef _DEBUG
-    if (g_trace)
-    {
-        fclose(machine->trace);
-    }
-#endif // _DEBUG
-
-    return EXIT_SUCCESS;
-}

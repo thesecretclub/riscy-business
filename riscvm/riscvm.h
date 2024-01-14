@@ -3,10 +3,13 @@
 #include <stdint.h>
 #include <wchar.h>
 
+extern uint8_t g_code[0x10000];
+extern uint8_t g_stack[0x10000];
+
 #ifdef _DEBUG
 
 #define HAS_TRACE
-static bool g_trace = false;
+extern bool g_trace;
 
 #define ALWAYS_INLINE
 #define NEVER_INLINE
@@ -80,6 +83,7 @@ struct riscvm
 
 #ifdef _DEBUG
     FILE* trace;
+    int64_t rebase;
 #endif // _DEBUG
 
 #ifdef CODE_ENCRYPTION
@@ -269,3 +273,6 @@ ALWAYS_INLINE static int32_t bit_signer(uint32_t field, uint32_t size)
 {
     return (field & (1U << (size - 1))) ? (int32_t)(field | (0xFFFFFFFFU << size)) : (int32_t)field;
 }
+
+void riscvm_loadfile(riscvm_ptr self, const char* filename);
+void riscvm_run(riscvm_ptr self);

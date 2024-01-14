@@ -34,6 +34,7 @@ project(riscvm)
 
 # Target: riscvm
 set(riscvm_SOURCES
+	main.cpp
 	riscvm.cpp
 	riscvm.h
 	opcodes.h
@@ -99,6 +100,38 @@ endif()
 get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
 if(NOT CMKR_VS_STARTUP_PROJECT)
 	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT riscvm)
+endif()
+
+# Target: tests
+set(tests_SOURCES
+	tests.cpp
+	riscvm.cpp
+	cmake.toml
+)
+
+add_executable(tests)
+
+target_sources(tests PRIVATE ${tests_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${tests_SOURCES})
+
+target_compile_definitions(tests PRIVATE
+	DEBUG_SYSCALLS
+)
+
+target_compile_features(tests PRIVATE
+	cxx_std_17
+)
+
+if(MSVC) # msvc
+	target_link_options(tests PRIVATE
+		"/DYNAMICBASE:NO"
+		"/INCREMENTAL:NO"
+	)
+endif()
+
+get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+if(NOT CMKR_VS_STARTUP_PROJECT)
+	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT tests)
 endif()
 
 # Target: riscvm-crt0

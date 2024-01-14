@@ -10,7 +10,7 @@ RISCVM_DEBUG_SYSCALLS = true
 
 [target.riscvm]
 type = "executable"
-sources = ["riscvm.cpp"]
+sources = ["main.cpp", "riscvm.cpp"]
 headers = ["riscvm.h", "opcodes.h", "shuffled_opcodes.h", "trace.h"]
 compile-features = ["cxx_std_17"]
 RISCVM_DIRECT_DISPATCH.compile-definitions = ["DIRECT_DISPATCH"]
@@ -19,6 +19,13 @@ RISCVM_OPCODE_SHUFFLING.compile-definitions = ["OPCODE_SHUFFLING"]
 RISCVM_DEBUG_SYSCALLS.compile-definitions = ["DEBUG_SYSCALLS"]
 clang-cl.compile-options = ["/clang:-fno-jump-tables", "/clang:-mno-sse"]
 clang.compile-options = ["-fno-jump-tables", "-mno-sse"]
+msvc.link-options = ["/DYNAMICBASE:NO", "/INCREMENTAL:NO"]
+
+[target.tests]
+type = "executable"
+sources = ["tests.cpp", "riscvm.cpp"]
+compile-features = ["cxx_std_17"]
+compile-definitions = ["DEBUG_SYSCALLS"]
 msvc.link-options = ["/DYNAMICBASE:NO", "/INCREMENTAL:NO"]
 
 # Only for IDE purposes, not actually built here
