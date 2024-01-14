@@ -67,13 +67,13 @@ enum RV64_Imm64
     rv64_imm64_andi = 0b00100, // original 0b00111
     rv64_imm64_sltiu = 0b00101, // original 0b00011
     rv64_imm64_addi = 0b00110, // original 0b00000
-    rv64_imm64_srli = 0b00111, // original 0b00101
+    rv64_imm64_srxi = 0b00111, // original 0b00101
     rv64_imm64_invalid = 0b11111, // placeholder
 };
 
 enum RV64_Imm32
 {
-    rv64_imm32_srliw = 0b00000, // original 0b00101
+    rv64_imm32_srxiw = 0b00000, // original 0b00101
     rv64_imm32_slliw = 0b00001, // original 0b00001
     rv64_imm32_addiw = 0b00010, // original 0b00000
     rv64_imm32_invalid = 0b11111, // placeholder

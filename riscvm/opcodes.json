@@ -59,7 +59,7 @@
     "rv64_imm32": {
         "0": "addiw",
         "1": "slliw",
-        "5": "srliw"
+        "5": "srxiw"
     },
     "rv64_imm64": {
         "0": "addi",
@@ -67,7 +67,7 @@
         "2": "slti",
         "3": "sltiu",
         "4": "xori",
-        "5": "srli",
+        "5": "srxi",
         "6": "ori",
         "7": "andi"
     },

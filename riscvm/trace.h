@@ -109,8 +109,7 @@ void trace_imm64(riscvm_ptr self, Instruction inst, char* buffer)
         break;
     case rv64_imm64_slli:
         memnomic = "slli";
-        imm      = inst.rwtype.rs2;
-        val      = rs1 << imm;
+        val      = rs1 << (imm & 0b111111);
         break;
     case rv64_imm64_slti:
         memnomic = "slti";
@@ -124,10 +123,17 @@ void trace_imm64(riscvm_ptr self, Instruction inst, char* buffer)
         memnomic = "xori";
         val      = rs1 ^ imm;
         break;
-    case rv64_imm64_srli:
-        memnomic = "srli";
-        imm      = inst.rwtype.rs2;
-        val      = rs1 >> imm;
+    case rv64_imm64_srxi:
+        if ((inst.itype.imm >> 10) & 1)
+        {
+            memnomic = "srai";
+            val      = rs1 >> (imm & 0b111111);
+        }
+        else
+        {
+            memnomic = "srli";
+            val      = (uint64_t)rs1 >> (imm & 0b111111);
+        }
         break;
     case rv64_imm64_ori:
         memnomic = "ori";
@@ -166,13 +172,19 @@ void trace_imm32(riscvm_ptr self, Instruction inst, char* buffer)
         break;
     case rv64_imm32_slliw:
         memnomic = "slliw";
-        imm      = inst.rwtype.rs2;
-        val      = rs1 << imm;
+        val      = int32_t(rs1) << (imm & 0b11111);
         break;
-    case rv64_imm32_srliw:
-        memnomic = "srliw";
-        imm      = inst.rwtype.rs2;
-        val      = rs1 >> imm;
+    case rv64_imm32_srxiw:
+        if ((inst.itype.imm >> 10) & 1)
+        {
+            memnomic = "sraiw";
+            val      = int32_t(rs1) >> (imm & 0b11111);
+        }
+        else
+        {
+            memnomic = "srliw";
+            val      = int32_t(uint32_t(rs1) >> (imm & 0b11111));
+        }
         break;
     default:
         memnomic = "unk(imm32)";
@@ -208,7 +220,7 @@ void trace_op64(riscvm_ptr self, Instruction inst, char* buffer)
         break;
     case rv64_op64_sll:
         memnomic = "sll";
-        val      = rs1 << rs2;
+        val      = rs1 << (rs2 & 0b111111);
         break;
     case rv64_op64_slt:
         memnomic = "slt";
@@ -224,11 +236,11 @@ void trace_op64(riscvm_ptr self, Instruction inst, char* buffer)
         break;
     case rv64_op64_srl:
         memnomic = "srl";
-        val      = rs1 >> rs2;
+        val      = (uint64_t)rs1 >> (rs2 & 0b11111);
         break;
     case rv64_op64_sra:
         memnomic = "sra";
-        val      = rs1 >> rs2;
+        val      = rs1 >> (rs2 & 0b11111);
         break;
     case rv64_op64_or:
         memnomic = "or";
@@ -255,21 +267,73 @@ void trace_op64(riscvm_ptr self, Instruction inst, char* buffer)
         val      = (__int128)(rs1 * rs2) >> 64;
         break;
     case rv64_op64_div:
-        memnomic = "div";
-        val      = rs1 / rs2;
+    {
+        memnomic         = "div";
+        int64_t dividend = rs1;
+        int64_t divisor  = rs2;
+        if (UNLIKELY((dividend == (-9223372036854775807LL - 1)) && (divisor == -1)))
+        {
+            val = (-9223372036854775807LL - 1);
+        }
+        else if (UNLIKELY(divisor == 0))
+        {
+            val = -1;
+        }
+        else
+        {
+            val = dividend / divisor;
+        }
         break;
+    }
     case rv64_op64_divu:
-        memnomic = "divu";
-        val      = rs1 / rs2;
+    {
+        memnomic          = "divu";
+        uint64_t dividend = (uint64_t)rs1;
+        uint64_t divisor  = (uint64_t)rs2;
+        if (UNLIKELY(divisor == 0))
+        {
+            val = -1;
+        }
+        else
+        {
+            val = (int64_t)(dividend / divisor);
+        }
         break;
+    }
     case rv64_op64_rem:
-        memnomic = "rem";
-        val      = rs1 % rs2;
+    {
+        memnomic         = "rem";
+        int64_t dividend = rs1;
+        int64_t divisor  = rs2;
+        if (UNLIKELY((dividend == (-9223372036854775807LL - 1)) && (divisor == -1)))
+        {
+            val = 0;
+        }
+        else if (UNLIKELY(divisor == 0))
+        {
+            val = dividend;
+        }
+        else
+        {
+            val = dividend % divisor;
+        }
         break;
+    }
     case rv64_op64_remu:
-        memnomic = "remu";
-        val      = rs1 % rs2;
+    {
+        memnomic          = "remu";
+        uint64_t dividend = (uint64_t)rs1;
+        uint64_t divisor  = (uint64_t)rs2;
+        if (UNLIKELY(divisor == 0))
+        {
+            val = (int64_t)dividend;
+        }
+        else
+        {
+            val = (int64_t)(dividend % divisor);
+        }
         break;
+    }
     default:
         memnomic = "unk(op64)";
         break;
@@ -302,35 +366,59 @@ void trace_op32(riscvm_ptr self, Instruction inst, char* buffer)
         break;
     case rv64_op32_sllw:
         memnomic = "sllw";
-        val      = rs1 << rs2;
+        val      = int32_t(rs1 << (rs2 & 0b11111));
         break;
     case rv64_op32_srlw:
         memnomic = "srlw";
-        val      = rs1 >> rs2;
+        val      = rs1 >> (uint32_t(rs2) & 0b11111);
         break;
     case rv64_op32_sraw:
         memnomic = "sraw";
-        val      = rs1 >> rs2;
+        val      = int32_t(rs1) >> (rs2 & 0b11111);
         break;
     case rv64_op32_mulw:
         memnomic = "mulw";
         val      = rs1 * rs2;
         break;
     case rv64_op32_divw:
-        memnomic = "divw";
-        val      = rs1 / rs2;
+    {
+        memnomic         = "divw";
+        int32_t dividend = (int32_t)rs1;
+        int32_t divisor  = (int32_t)rs2;
+        if (UNLIKELY((dividend == (-2147483647 - 1)) && (divisor == -1)))
+        {
+            val = -2147483648LL;
+        }
+        else if (UNLIKELY(divisor == 0))
+        {
+            val = -1;
+        }
+        else
+        {
+            val = (int64_t)(dividend / divisor);
+        }
         break;
+    }
     case rv64_op32_divuw:
         memnomic = "divuw";
-        val      = rs1 / rs2;
+        if (rs2 == 0)
+            val = -1;
+        else
+            val = rs1 / rs2;
         break;
     case rv64_op32_remw:
         memnomic = "remw";
-        val      = rs1 % rs2;
+        if (rs2 == 0)
+            val = rs1;
+        else
+            val = rs1 % rs2;
         break;
     case rv64_op32_remuw:
         memnomic = "remuw";
-        val      = rs1 % rs2;
+        if (rs2 == 0)
+            val = rs1;
+        else
+            val = rs1 % rs2;
         break;
     default:
         memnomic = "unk(op32)";
@@ -550,6 +638,11 @@ void trace_system(riscvm_ptr self, Instruction inst, char* buffer)
 
 void riscvm_trace(riscvm_ptr self, Instruction inst)
 {
+    if (inst.compressed_flags != 0b11)
+    {
+        panic("compressed instructions not supported!");
+    }
+
     char buffer[256];
 
     int calldepth = g_calldepth;

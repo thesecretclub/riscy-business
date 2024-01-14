@@ -293,58 +293,6 @@ ALWAYS_INLINE static bool riscvm_handle_syscall(riscvm_ptr self, uint64_t code, 
     return true;
 }
 
-ALWAYS_INLINE static int64_t riscvm_shl_int64(int64_t a, int64_t b)
-{
-    if (LIKELY(b >= 0 && b < 64))
-    {
-        return ((uint64_t)a) << b;
-    }
-    else if (UNLIKELY(b < 0 && b > -64))
-    {
-        return (uint64_t)a >> -b;
-    }
-    else
-    {
-        return 0;
-    }
-}
-
-ALWAYS_INLINE static int64_t riscvm_shr_int64(int64_t a, int64_t b)
-{
-    if (LIKELY(b >= 0 && b < 64))
-    {
-        return (uint64_t)a >> b;
-    }
-    else if (UNLIKELY(b < 0 && b > -64))
-    {
-        return (uint64_t)a << -b;
-    }
-    else
-    {
-        return 0;
-    }
-}
-
-ALWAYS_INLINE static int64_t riscvm_asr_int64(int64_t a, int64_t b)
-{
-    if (LIKELY(b >= 0 && b < 64))
-    {
-        return a >> b;
-    }
-    else if (UNLIKELY(b >= 64))
-    {
-        return a < 0 ? -1 : 0;
-    }
-    else if (UNLIKELY(b < 0 && b > -64))
-    {
-        return a << -b;
-    }
-    else
-    {
-        return 0;
-    }
-}
-
 ALWAYS_INLINE static __int128 riscvm_shr_int128(__int128 a, __int128 b)
 {
     if (LIKELY(b >= 0 && b < 128))
@@ -539,7 +487,7 @@ ALWAYS_INLINE static bool handler_rv64_imm64(riscvm_ptr self, Instruction inst)
     }
     case rv64_imm64_slli:
     {
-        val = riscvm_shl_int64(val, inst.rwtype.rs2);
+        val = val << (inst.itype.imm & 0b111111);
         break;
     }
     case rv64_imm64_slti:
@@ -571,15 +519,17 @@ ALWAYS_INLINE static bool handler_rv64_imm64(riscvm_ptr self, Instruction inst)
         val = val ^ imm;
         break;
     }
-    case rv64_imm64_srli:
+    case rv64_imm64_srxi:
     {
-        if (inst.rwtype.shamt)
+        if ((inst.itype.imm >> 10) & 1)
         {
-            val = riscvm_asr_int64(val, inst.rwtype.rs2);
+            // srai
+            val = val >> (imm & 0b111111);
         }
         else
         {
-            val = riscvm_shr_int64(val, inst.rwtype.rs2);
+            // srli
+            val = (uint64_t)val >> (imm & 0b111111);
         }
         break;
     }
@@ -619,18 +569,20 @@ ALWAYS_INLINE static bool handler_rv64_imm32(riscvm_ptr self, Instruction inst)
     }
     case rv64_imm32_slliw:
     {
-        val = (int64_t)(int32_t)riscvm_shl_int64(val, imm);
+        val = int32_t(val) << (imm & 0b11111);
         break;
     }
-    case rv64_imm32_srliw:
+    case rv64_imm32_srxiw:
     {
-        if (inst.rwtype.shamt)
+        if ((inst.itype.imm >> 10) & 1)
         {
-            val = (int64_t)(int32_t)riscvm_asr_int64(val, inst.rwtype.rs2);
+            // sraiw
+            val = int32_t(val) >> (imm & 0b11111);
         }
         else
         {
-            val = (int64_t)(int32_t)riscvm_shr_int64(val, inst.rwtype.rs2);
+            // srliw
+            val = int32_t(uint32_t(val) >> (imm & 0b11111));
         }
         break;
     }
@@ -666,7 +618,7 @@ ALWAYS_INLINE static bool handler_rv64_op64(riscvm_ptr self, Instruction inst)
     }
     case rv64_op64_sll:
     {
-        val = riscvm_shl_int64(val1, val2 & 0x1f);
+        val = val1 << (val2 & 0b111111);
         break;
     }
     case rv64_op64_slt:
@@ -700,12 +652,12 @@ ALWAYS_INLINE static bool handler_rv64_op64(riscvm_ptr self, Instruction inst)
     }
     case rv64_op64_srl:
     {
-        val = riscvm_shr_int64(val1, val2 & 0x1f);
+        val = (uint64_t)val1 >> (val2 & 0b11111);
         break;
     }
     case rv64_op64_sra:
     {
-        val = riscvm_asr_int64(val1, val2 & 0x1f);
+        val = val1 >> (val2 & 0b11111);
         break;
     }
     case rv64_op64_or:
@@ -829,12 +781,12 @@ ALWAYS_INLINE static bool handler_rv64_op32(riscvm_ptr self, Instruction inst)
     }
     case rv64_op32_sllw:
     {
-        val = (int64_t)(int32_t)riscvm_shl_int64(val1, (val2 & 0x1f));
+        val = int32_t(val1 << (val2 & 0b11111));
         break;
     }
     case rv64_op32_srlw:
     {
-        val = (int64_t)(int32_t)riscvm_shr_int64(val1, (val2 & 0x1f));
+        val = int32_t(uint32_t(val1) >> (val2 & 0b11111));
         break;
     }
     case rv64_op32_mulw:
@@ -908,7 +860,7 @@ ALWAYS_INLINE static bool handler_rv64_op32(riscvm_ptr self, Instruction inst)
     }
     case rv64_op32_sraw:
     {
-        val = (int64_t)(int32_t)riscvm_asr_int64(val1, val2 & 0x1f);
+        val = int32_t(val1) >> (val2 & 0b11111);
         break;
     }
     case rv64_op32_subw:
