@@ -34,7 +34,7 @@ int main(int argc, char** argv)
         printf("[%s] ", test.name);
         if (test.size > sizeof(g_code))
         {
-            printf("ERROR (too big)\n", test.name);
+            printf("ERROR (too big)\n");
             continue;
         }
         total++;
@@ -68,4 +68,5 @@ int main(int argc, char** argv)
         }
     }
     printf("\n%d/%d tests successful (%.2f%%)\n", successful, total, successful * 1.0f / total * 100);
+    return successful == total ? EXIT_SUCCESS : EXIT_FAILURE;
 }

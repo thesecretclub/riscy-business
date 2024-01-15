@@ -1,0 +1,38 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  cmake:
+    # Skip building pull requests from the same repository
+    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) }}
+    runs-on: windows-2022
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: riscvm
+      run: |
+        cd riscvm
+        cmake -B build -T ClangCL
+        cmake --build build --config Debug --parallel
+        ./build/Debug/tests.exe
+
+    - name: transpiler
+      run: |
+        cd transpiler
+        curl -sLO https://github.com/thesecretclub/riscy-business/releases/download/transpiler-v0.3/llvm-17.0.2-win64.7z
+        7z x llvm-17.0.2-win64.7z -ollvm
+        cmake -B build "-DCMAKE_PREFIX_PATH=./llvm"
+        cmake --build build --config RelWithDebInfo --parallel
+
+    - name: python
+      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+      with:
+        python-version: '3.11'
+
+    - name: payload
+      run: |
+        cd payload
+        cmake -B build -T ClangCL
+        cmake --build build --config Release
