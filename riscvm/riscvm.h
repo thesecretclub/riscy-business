@@ -31,7 +31,11 @@ extern bool g_trace;
 #define log(...)
 #define logw(...)
 
-#define panic(...) __debugbreak();
+#if defined(SILENT_PANIC)
+#define panic(...) return false
+#else
+#define panic(...) __debugbreak()
+#endif
 
 #if defined(__GNUC__) || defined(__clang__)
 #define ALWAYS_INLINE [[gnu::always_inline]]
@@ -82,7 +86,7 @@ struct riscvm
     uint64_t regs[32];
 
 #ifdef _DEBUG
-    FILE* trace;
+    FILE*   trace;
     int64_t rebase;
 #endif // _DEBUG
 
@@ -252,27 +256,27 @@ enum RegIndex
 #include "opcodes.h"
 #endif // OPCODE_SHUFFLING
 
-template <typename T> ALWAYS_INLINE static T riscvm_read(uint64_t addr)
+template <typename T> ALWAYS_INLINE T riscvm_read(uint64_t addr)
 {
     T data;
     memcpy(&data, (const void*)addr, sizeof(data));
     return data;
 }
 
-template <typename T> ALWAYS_INLINE static void riscvm_write(uint64_t addr, T val)
+template <typename T> ALWAYS_INLINE void riscvm_write(uint64_t addr, T val)
 {
     memcpy((void*)addr, &val, sizeof(val));
 }
 
-ALWAYS_INLINE static void* riscvm_getptr(riscvm_ptr self, uint64_t addr)
+ALWAYS_INLINE inline void* riscvm_getptr(riscvm_ptr self, uint64_t addr)
 {
     return (void*)addr;
 }
 
-ALWAYS_INLINE static int32_t bit_signer(uint32_t field, uint32_t size)
+ALWAYS_INLINE inline int32_t bit_signer(uint32_t field, uint32_t size)
 {
     return (field & (1U << (size - 1))) ? (int32_t)(field | (0xFFFFFFFFU << size)) : (int32_t)field;
 }
 
 void riscvm_loadfile(riscvm_ptr self, const char* filename);
-void riscvm_run(riscvm_ptr self);
+extern "C" __declspec(dllexport) void riscvm_run(riscvm_ptr self);

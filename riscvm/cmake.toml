@@ -7,6 +7,7 @@ RISCVM_DIRECT_DISPATCH = false
 RISCVM_CODE_ENCRYPTION = true
 RISCVM_OPCODE_SHUFFLING = true
 RISCVM_DEBUG_SYSCALLS = true
+RISCVM_SILENT_PANIC = false
 
 [target.riscvm]
 type = "executable"
@@ -17,6 +18,7 @@ RISCVM_DIRECT_DISPATCH.compile-definitions = ["DIRECT_DISPATCH"]
 RISCVM_CODE_ENCRYPTION.compile-definitions = ["CODE_ENCRYPTION"]
 RISCVM_OPCODE_SHUFFLING.compile-definitions = ["OPCODE_SHUFFLING"]
 RISCVM_DEBUG_SYSCALLS.compile-definitions = ["DEBUG_SYSCALLS"]
+RISCVM_SILENT_PANIC.compile-definitions = ["SILENT_PANIC"]
 clang-cl.compile-options = ["/clang:-fno-jump-tables", "/clang:-mno-sse"]
 clang.compile-options = ["-fno-jump-tables", "-mno-sse"]
 msvc.link-options = ["/DYNAMICBASE:NO", "/INCREMENTAL:NO"]

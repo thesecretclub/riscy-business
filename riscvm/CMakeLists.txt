@@ -29,6 +29,7 @@ option(RISCVM_DIRECT_DISPATCH "" OFF)
 option(RISCVM_CODE_ENCRYPTION "" ON)
 option(RISCVM_OPCODE_SHUFFLING "" ON)
 option(RISCVM_DEBUG_SYSCALLS "" ON)
+option(RISCVM_SILENT_PANIC "" OFF)
 
 project(riscvm)
 
@@ -69,6 +70,12 @@ endif()
 if(RISCVM_DEBUG_SYSCALLS) # RISCVM_DEBUG_SYSCALLS
 	target_compile_definitions(riscvm PRIVATE
 		DEBUG_SYSCALLS
+	)
+endif()
+
+if(RISCVM_SILENT_PANIC) # RISCVM_SILENT_PANIC
+	target_compile_definitions(riscvm PRIVATE
+		SILENT_PANIC
 	)
 endif()
 
