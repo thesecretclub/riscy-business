@@ -5,6 +5,11 @@
 #include <map>
 #include <set>
 
+namespace vm
+{
+#include "../../riscvm/riscvm.h"
+} // namespace vm
+
 #include <zasm/zasm.hpp>
 #include <zasm/formatter/formatter.hpp>
 
@@ -434,6 +439,7 @@ static bool obfuscate_riscvm_run(Program& program)
         if (auto instr = node->getIf<Instruction>(); instr != nullptr)
         {
             assembler.setCursor(node->getPrev());
+            // TODO: actual obfuscation
             assembler.nop();
         }
         puts(formatter::toString(program, node).c_str());
@@ -442,49 +448,8 @@ static bool obfuscate_riscvm_run(Program& program)
     return true;
 }
 
-struct riscvm
+namespace vm
 {
-    int64_t  pc;
-    uint64_t regs[32];
-};
-
-// Reference: https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc
-enum RegIndex
-{
-    reg_zero, // always zero
-    reg_ra,   // return address
-    reg_sp,   // stack pointer
-    reg_gp,   // global pointer
-    reg_tp,   // thread pointer
-    reg_t0,
-    reg_t1,
-    reg_t2,
-    reg_s0,
-    reg_s1,
-    reg_a0,
-    reg_a1,
-    reg_a2,
-    reg_a3,
-    reg_a4,
-    reg_a5,
-    reg_a6,
-    reg_a7,
-    reg_s2,
-    reg_s3,
-    reg_s4,
-    reg_s5,
-    reg_s6,
-    reg_s7,
-    reg_s8,
-    reg_s9,
-    reg_s10,
-    reg_s11,
-    reg_t3,
-    reg_t4,
-    reg_t5,
-    reg_t6,
-};
-
 #ifdef _WIN32
 #pragma section(".vmcode", read, write)
 __declspec(align(4096)) uint8_t g_code[0x10000];
@@ -494,6 +459,65 @@ __declspec(align(4096)) uint8_t g_stack[0x10000];
 uint8_t g_code[0x10000] __attribute__((aligned(0x1000)));
 uint8_t g_stack[0x10000] __attribute__((aligned(0x1000)));
 #endif // _WIN32
+} // namespace vm
+
+typedef void (*riscvm_run_t)(vm::riscvm*);
+
+#include "../../riscvm/isa-tests/data.h"
+
+static bool run_isa_tests(riscvm_run_t riscvm_run, const std::vector<std::string>& filter = {})
+{
+    using namespace vm;
+
+    auto total      = 0;
+    auto successful = 0;
+    for (const auto& test : tests)
+    {
+        if (!filter.empty())
+        {
+            auto allowed = false;
+            for (const auto& white : filter)
+            {
+                if (white == test.name)
+                {
+                    allowed = true;
+                    break;
+                }
+            }
+            if (!allowed)
+                continue;
+        }
+
+        printf("[%s] ", test.name);
+        if (test.size > sizeof(g_code))
+        {
+            printf("ERROR (too big)\n");
+            continue;
+        }
+        total++;
+
+        memset(g_code, 0, sizeof(g_code));
+        memcpy(g_code, test.data, test.size);
+        riscvm vm   = {};
+        auto   self = &vm;
+        reg_write(reg_sp, (uint64_t)&g_stack[sizeof(g_stack) - 0x10]);
+        self->pc = (int64_t)g_code + test.offset;
+        riscvm_run(self);
+
+        auto status = (int)reg_read(reg_a0);
+        if (status != 0)
+        {
+            printf("FAILURE (status: %d)\n", status);
+        }
+        else
+        {
+            successful++;
+            printf("SUCCESS\n");
+        }
+    }
+    printf("\n%d/%d tests successful (%.2f%%)\n", successful, total, successful * 1.0f / total * 100);
+    return successful == total ? EXIT_SUCCESS : EXIT_FAILURE;
+}
 
 int main(int argc, char** argv)
 {
@@ -573,12 +597,18 @@ int main(int argc, char** argv)
     auto size = serializer.getCodeSize();
 
     memcpy(shellcode, ptr, size);
+    auto riscvm_run = (riscvm_run_t)shellcode;
 
-    auto   riscvm_run = (void (*)(riscvm*))shellcode;
-    riscvm vm         = {0};
-    vm.pc             = (int64_t)payload.data();
-    vm.regs[reg_sp]   = (uint64_t)(uint64_t)&g_stack[sizeof(g_stack) - 0x10];
-    riscvm_run(&vm);
+    run_isa_tests(riscvm_run);
+
+    // Execute the full payload
+    {
+        using namespace vm;
+        riscvm vm       = {0};
+        vm.pc           = (int64_t)payload.data();
+        vm.regs[reg_sp] = (uint64_t)(uint64_t)&g_stack[sizeof(g_stack) - 0x10];
+        riscvm_run(&vm);
+    }
 
     return EXIT_SUCCESS;
 }
