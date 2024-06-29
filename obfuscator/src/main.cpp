@@ -17,7 +17,7 @@ namespace vm
 
 using namespace zasm;
 
-static bool load_file(const char* path, std::vector<uint8_t>& data)
+static bool loadFile(const char* path, std::vector<uint8_t>& data)
 {
     FILE* file = nullptr;
     fopen_s(&file, path, "rb");
@@ -37,7 +37,7 @@ static bool load_file(const char* path, std::vector<uint8_t>& data)
     return true;
 }
 
-static bool find_riscvm_run(const std::vector<uint8_t>& pe, uint64_t& address, std::vector<uint8_t>& function_code)
+static bool findRiscvmRun(const std::vector<uint8_t>& pe, uint64_t& address, std::vector<uint8_t>& functionCode)
 {
     // Iterate export directory and look for 'riscvm_run'
     auto pdh = (IMAGE_DOS_HEADER*)pe.data();
@@ -61,8 +61,6 @@ static bool find_riscvm_run(const std::vector<uint8_t>& pe, uint64_t& address, s
         return false;
     }
 
-    auto export_dir = poh->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
-
     auto rva2offset = [&](uint32_t rva) -> uint32_t
     {
         auto section = IMAGE_FIRST_SECTION(pnth);
@@ -80,50 +78,50 @@ static bool find_riscvm_run(const std::vector<uint8_t>& pe, uint64_t& address, s
     };
 
     // Print all exports and the function rva
-    uint32_t riscvm_run_rva = 0;
-    auto pexport_dir = (IMAGE_EXPORT_DIRECTORY*)((uint8_t*)pe.data() + rva2offset(export_dir.VirtualAddress));
-    for (DWORD i = 0; i < pexport_dir->NumberOfNames; i++)
+    uint32_t riscvmRunRva  = 0;
+    auto     dataDirExport = poh->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
+    auto exportDir = (IMAGE_EXPORT_DIRECTORY*)((uint8_t*)pe.data() + rva2offset(dataDirExport.VirtualAddress));
+    for (DWORD i = 0; i < exportDir->NumberOfNames; i++)
     {
-        auto pnames = (uint32_t*)((uint8_t*)pe.data() + rva2offset(pexport_dir->AddressOfNames));
-        auto pname  = (const char*)((uint8_t*)pe.data() + rva2offset(pnames[i]));
+        auto addressOfNames = (uint32_t*)((uint8_t*)pe.data() + rva2offset(exportDir->AddressOfNames));
+        auto name           = (const char*)((uint8_t*)pe.data() + rva2offset(addressOfNames[i]));
 
-        auto pordinals = (uint16_t*)((uint8_t*)pe.data() + rva2offset(pexport_dir->AddressOfNameOrdinals));
-        auto pordinal  = pordinals[i];
+        auto addressOfNameOrdinals =
+            (uint16_t*)((uint8_t*)pe.data() + rva2offset(exportDir->AddressOfNameOrdinals));
+        auto nameOrdinal = addressOfNameOrdinals[i];
 
-        auto pfunctions = (uint32_t*)((uint8_t*)pe.data() + rva2offset(pexport_dir->AddressOfFunctions));
-        auto pfunction  = pfunctions[pordinal];
+        auto addressOfFunctions = (uint32_t*)((uint8_t*)pe.data() + rva2offset(exportDir->AddressOfFunctions));
+        auto functionAddress = addressOfFunctions[nameOrdinal];
 
-        // printf("Export: %s, RVA: 0x%X\n", pname, pfunction);
-        if (strcmp(pname, "riscvm_run") == 0)
+        if (strcmp(name, "riscvm_run") == 0)
         {
-            riscvm_run_rva = pfunction;
+            riscvmRunRva = functionAddress;
             break;
         }
     }
 
-    if (riscvm_run_rva == 0)
+    if (riscvmRunRva == 0)
     {
         puts("Failed to find riscvm_run export.");
         return false;
     }
 
     // Get function range from RUNTIME_FUNCTION
-    auto pexception_dir = poh->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION];
-    auto pexception =
-        (IMAGE_RUNTIME_FUNCTION_ENTRY*)((uint8_t*)pe.data() + rva2offset(pexception_dir.VirtualAddress));
-    for (int i = 0; i < pexception_dir.Size / sizeof(IMAGE_RUNTIME_FUNCTION_ENTRY); i++)
+    auto dataDirException = poh->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION];
+    auto exceptionDir =
+        (IMAGE_RUNTIME_FUNCTION_ENTRY*)((uint8_t*)pe.data() + rva2offset(dataDirException.VirtualAddress));
+    for (int i = 0; i < dataDirException.Size / sizeof(IMAGE_RUNTIME_FUNCTION_ENTRY); i++)
     {
-        auto pfunction = &pexception[i];
-        // printf("Function: 0x%X - 0x%X\n", pfunction->BeginAddress, pfunction->EndAddress);
-        if (pfunction->BeginAddress == riscvm_run_rva)
+        auto runtimeFunction = &exceptionDir[i];
+        if (runtimeFunction->BeginAddress == riscvmRunRva)
         {
-            auto size = pfunction->EndAddress - pfunction->BeginAddress;
+            auto size = runtimeFunction->EndAddress - runtimeFunction->BeginAddress;
 
-            address = poh->ImageBase + riscvm_run_rva;
-            function_code.resize(size);
+            address = poh->ImageBase + riscvmRunRva;
+            functionCode.resize(size);
 
-            auto offset = rva2offset(riscvm_run_rva);
-            memcpy(function_code.data(), pe.data() + offset, size);
+            auto offset = rva2offset(riscvmRunRva);
+            memcpy(functionCode.data(), pe.data() + offset, size);
 
             return true;
         }
@@ -132,7 +130,7 @@ static bool find_riscvm_run(const std::vector<uint8_t>& pe, uint64_t& address, s
     return false;
 }
 
-static std::string format_flags_mask(uint32_t mask)
+static std::string formatFlagsMask(uint32_t mask)
 {
     std::string result;
 #define FLAG(x)   \
@@ -160,7 +158,7 @@ static std::string format_flags_mask(uint32_t mask)
     return "(" + result + ")";
 }
 
-static std::string format_regs_mask(uint64_t mask)
+static std::string formatRegsMask(uint64_t mask)
 {
     std::string result;
 #define REG(x)                                     \
@@ -192,12 +190,12 @@ struct InstructionData
 {
     uint64_t          address = 0;
     InstructionDetail detail;
-    uint32_t          flags_modified = 0;
-    uint32_t          flags_tested   = 0;
-    uint32_t          flags_live     = 0;
-    uint32_t          regs_written   = 0;
-    uint32_t          regs_read      = 0;
-    uint32_t          regs_live      = 0;
+    uint32_t          flagsModified = 0;
+    uint32_t          flagsTested   = 0;
+    uint32_t          flagsLive     = 0;
+    uint32_t          regsWritten   = 0;
+    uint32_t          regsRead      = 0;
+    uint32_t          regsLive      = 0;
 };
 
 struct Context
@@ -208,7 +206,7 @@ struct Context
     {
     }
 
-    InstructionData* add_instruction_data(Node* node, uint64_t address, const InstructionDetail& detail)
+    InstructionData* addInstructionData(Node* node, uint64_t address, const InstructionDetail& detail)
     {
         auto instructionData = node->getUserData<InstructionData>();
         if (instructionData == nullptr)
@@ -226,7 +224,147 @@ struct Context
     std::deque<InstructionData> instructionDataPool;
 };
 
-static bool analyze_riscvm_run(Context& ctx)
+static bool disassembleRiscvmRun(Context& ctx, const uint64_t functionStart, const std::vector<uint8_t>& code)
+{
+    Program& program = ctx.program;
+
+    puts("=== DISASSEMBLE ===");
+    zasm::Decoder  decoder(program.getMode());
+    x86::Assembler assembler(program);
+
+    auto entryLabel = assembler.createLabel("riscvm_run");
+    assembler.bind(entryLabel);
+    ctx.addInstructionData(assembler.getCursor(), functionStart, {});
+    program.setEntryPoint(entryLabel);
+
+    std::map<uint64_t, Node*> nodes;
+    std::map<uint64_t, Label> labels;
+
+    size_t offset = 0;
+    while (offset < code.size())
+    {
+        auto curAddress = functionStart + offset;
+        auto decoderRes = decoder.decode(code.data() + offset, code.size() - offset, curAddress);
+        if (!decoderRes)
+        {
+            std::cout << "Failed to decode at " << std::hex << curAddress << ", "
+                      << decoderRes.error().getErrorName() << "\n";
+            return false;
+        }
+
+        nodes.emplace(curAddress, assembler.getCursor());
+
+        const auto& detail = *decoderRes;
+        const auto  instr  = detail.getInstruction();
+        auto        length = detail.getLength();
+        offset += length;
+
+        auto str = formatter::toString(&instr, formatter::Options::HexImmediates);
+        printf("0x%llX|%s\n", curAddress, str.c_str());
+
+        auto emit = [&]
+        {
+            if (auto res = assembler.emit(instr); res != zasm::ErrorCode::None)
+            {
+                std::cout << "Failed to emit instruction " << std::hex << curAddress << ", "
+                          << res.getErrorName() << "\n";
+                return false;
+            }
+            ctx.addInstructionData(assembler.getCursor(), curAddress, detail);
+            return true;
+        };
+
+        auto createLabel = [&](uint64_t dest)
+        {
+            auto itr = labels.find(dest);
+            if (itr == labels.end())
+            {
+                char name[64] = "";
+                sprintf_s(name, "label_%llX", dest);
+                auto label = assembler.createLabel(name);
+                itr        = labels.emplace(dest, label).first;
+            }
+            return itr->second;
+        };
+
+        switch (detail.getCategory())
+        {
+        case x86::Category::UncondBR:
+        {
+            auto dest = detail.getOperand<Imm>(0).value<uint64_t>();
+            printf("UncondBR: 0x%llX\n", dest);
+            assembler.emit(detail.getMnemonic(), createLabel(dest));
+            ctx.addInstructionData(assembler.getCursor(), curAddress, detail);
+        }
+        break;
+
+        case x86::Category::CondBr:
+        {
+            auto brtrue  = detail.getOperand<Imm>(0).value<uint64_t>();
+            auto brfalse = offset + functionStart;
+            createLabel(brfalse);
+            printf("CondBr: 0x%llX, 0x%llX\n", brtrue, brfalse);
+            assembler.emit(detail.getMnemonic(), createLabel(brtrue));
+            ctx.addInstructionData(assembler.getCursor(), curAddress, detail);
+        }
+        break;
+
+        case x86::Category::Call:
+        {
+            auto dest = detail.getOperand(0);
+            if (dest.getIf<Imm>() != nullptr)
+            {
+                printf("unsupported call imm\n");
+                return false;
+            }
+
+            if (!emit())
+            {
+                return false;
+            }
+        }
+        break;
+
+        case x86::Category::Ret:
+        {
+            if (!emit())
+            {
+                return false;
+            }
+        }
+        break;
+
+        default:
+        {
+            if (!emit())
+            {
+                return false;
+            }
+        }
+        break;
+        }
+    }
+
+    for (const auto& [address, label] : labels)
+    {
+        auto node = nodes.at(address);
+        assembler.setCursor(node);
+        assembler.bind(label);
+        auto detail = *node->get<Instruction>().getDetail(program.getMode());
+        ctx.addInstructionData(assembler.getCursor(), address, detail);
+    }
+
+    assembler.setCursor(program.getTail());
+    assembler.bind(assembler.createLabel("end"));
+
+    puts("");
+    std::string text = formatter::toString(program);
+    puts(text.c_str());
+
+    return true;
+}
+
+static bool analyzeRiscvmRun(Context& ctx)
 {
     Program& program = ctx.program;
     auto     mode    = program.getMode();
@@ -252,30 +390,30 @@ static bool analyze_riscvm_run(Context& ctx)
 
     while (!queue.empty())
     {
-        auto block_start_label = queue.back();
+        auto blockStartLabel = queue.back();
         queue.pop_back();
 
-        if (visisted.count(block_start_label.getId()))
+        if (visisted.count(blockStartLabel.getId()))
         {
             continue;
         }
-        visisted.insert(block_start_label.getId());
+        visisted.insert(blockStartLabel.getId());
 
-        const auto& label_data    = *program.getLabelData(block_start_label);
-        auto        block_address = label_data.node->getUserData<InstructionData>()->address;
+        const auto& labelData    = *program.getLabelData(blockStartLabel);
+        auto        blockAddress = labelData.node->getUserData<InstructionData>()->address;
 
         BasicBlock bb;
-        bb.address = block_address;
-        bb.label   = block_start_label;
-        bb.begin   = label_data.node->getNext();
+        bb.address = blockAddress;
+        bb.label   = blockStartLabel;
+        bb.begin   = labelData.node->getNext();
         if (bb.begin == nullptr)
         {
             puts("empty block!");
             __debugbreak();
         }
-        printf("<==> Disassembling block: %s (0x%llX)\n", label_data.name, block_address);
+        printf("<==> Disassembling block: %s (0x%llX)\n", labelData.name, blockAddress);
 
-        auto node     = label_data.node->getNext();
+        auto node     = labelData.node->getNext();
         bool finished = false;
         while (!finished)
         {
@@ -289,10 +427,9 @@ static bool analyze_riscvm_run(Context& ctx)
                 break;
             }
 
-            auto instruction_data = node->getUserData<InstructionData>();
-
-            auto str = formatter::toString(program, instr, formatter::Options::HexImmediates);
-            printf("0x%llX|%s\n", instruction_data->address, str.c_str());
+            auto data = node->getUserData<InstructionData>();
+            auto str  = formatter::toString(program, instr, formatter::Options::HexImmediates);
+            printf("0x%llX|%s\n", data->address, str.c_str());
 
             auto info = *instr->getDetail(mode);
             switch (info.getCategory())
@@ -362,10 +499,10 @@ static bool analyze_riscvm_run(Context& ctx)
     {
         for (const auto& successor : block.successors)
         {
-            auto instruction_data = program.getLabelData(successor).value().node->getUserData<InstructionData>();
-            auto successor_address = instruction_data->address;
-            successors[address].insert(successor_address);
-            predecessors[successor_address].insert(address);
+            auto data = program.getLabelData(successor).value().node->getUserData<InstructionData>();
+            auto successorAddress = data->address;
+            successors[address].insert(successorAddress);
+            predecessors[successorAddress].insert(address);
         }
     }
 
@@ -374,8 +511,8 @@ static bool analyze_riscvm_run(Context& ctx)
         auto str = formatter::toString(program, block.begin, block.end, formatter::Options::HexImmediates);
         printf("Analyzing block 0x%llX\n==========\n%s\n==========\n", address, str.c_str());
 
-        InstrCPUFlags flags_live = 0;
-        uint32_t      regs_live  = 0;
+        InstrCPUFlags flagsLive = 0;
+        uint32_t      regsLive  = 0;
         for (auto node = block.end->getPrev(); node != block.begin->getPrev(); node = node->getPrev())
         {
             auto  data   = node->getUserData<InstructionData>();
@@ -384,7 +521,7 @@ static bool analyze_riscvm_run(Context& ctx)
             auto instrText = formatter::toString(program, node, formatter::Options::HexImmediates);
             printf("0x%llX|%s\n", data->address, instrText.c_str());
 
-            auto reg_mask = [](const Reg& reg) -> uint64_t
+            auto regMask = [](const Reg& reg) -> uint64_t
             {
                 if (!reg.isValid() || reg == x86::rip || reg == x86::rflags)
                 {
@@ -400,7 +537,7 @@ static bool analyze_riscvm_run(Context& ctx)
 
                 auto mask = 1ULL << reg.getIndex();
 #ifdef _DEBUG
-                auto maskText = format_regs_mask(mask);
+                auto maskText = formatRegsMask(mask);
                 auto regText  = formatter::toString(reg);
                 for (auto& ch : regText)
                     ch = std::toupper(ch);
@@ -411,8 +548,8 @@ static bool analyze_riscvm_run(Context& ctx)
                 return mask;
             };
 
-            uint32_t regs_read    = 0;
-            uint32_t regs_written = 0;
+            uint32_t regsRead    = 0;
+            uint32_t regsWritten = 0;
             for (size_t i = 0; i < detail.getOperandCount(); i++)
             {
                 const auto& operand = detail.getOperand(i);
@@ -421,77 +558,77 @@ static bool analyze_riscvm_run(Context& ctx)
                     auto access = detail.getOperandAccess(i);
                     if ((uint8_t)(access & Operand::Access::MaskRead))
                     {
-                        regs_read |= reg_mask(reg->getRoot(mode));
+                        regsRead |= regMask(reg->getRoot(mode));
                     }
                     if ((uint8_t)(access & Operand::Access::MaskWrite))
                     {
-                        regs_written |= reg_mask(reg->getRoot(mode));
+                        regsWritten |= regMask(reg->getRoot(mode));
                     }
                 }
                 else if (auto mem = operand.getIf<Mem>())
                 {
-                    regs_read |= reg_mask(mem->getBase().getRoot(mode));
-                    regs_read |= reg_mask(mem->getIndex().getRoot(mode));
+                    regsRead |= regMask(mem->getBase().getRoot(mode));
+                    regsRead |= regMask(mem->getIndex().getRoot(mode));
                 }
             }
-            data->regs_read    = regs_read;
-            data->regs_written = regs_written;
+            data->regsRead    = regsRead;
+            data->regsWritten = regsWritten;
 
-            const auto& flags          = detail.getCPUFlags();
-            auto        flags_modified = flags.set0 | flags.set1 | flags.modified | flags.undefined;
-            auto        flags_tested   = flags.tested;
-            printf("\tflags modified: %s\n", format_flags_mask(flags_modified).c_str());
-            printf("\tflags tested: %s\n", format_flags_mask(flags_tested).c_str());
-            printf("\tregs read: %s\n", format_regs_mask(regs_read).c_str());
-            printf("\tregs written: %s\n", format_regs_mask(regs_written).c_str());
-            data->flags_modified = flags_modified;
-            data->flags_tested   = flags_tested;
+            const auto& flags         = detail.getCPUFlags();
+            auto        flagsModified = flags.set0 | flags.set1 | flags.modified | flags.undefined;
+            auto        flagsTested   = flags.tested;
+            printf("\tflags modified: %s\n", formatFlagsMask(flagsModified).c_str());
+            printf("\tflags tested: %s\n", formatFlagsMask(flagsTested).c_str());
+            printf("\tregs read: %s\n", formatRegsMask(regsRead).c_str());
+            printf("\tregs written: %s\n", formatRegsMask(regsWritten).c_str());
+            data->flagsModified = flagsModified;
+            data->flagsTested   = flagsTested;
 
-            if (flags_modified & flags_live)
+            if (flagsModified & flagsLive)
             {
-                printf("\tlive flags are modified: %s\n", format_flags_mask(flags_modified & flags_live).c_str());
+                printf("\tlive flags are modified: %s\n", formatFlagsMask(flagsModified & flagsLive).c_str());
             }
 
-            if (flags_tested & flags_live)
+            if (flagsTested & flagsLive)
             {
-                printf("\tlive flags are tested: %s\n", format_flags_mask(flags_tested & flags_live).c_str());
+                printf("\tlive flags are tested: %s\n", formatFlagsMask(flagsTested & flagsLive).c_str());
             }
 
             // If the flag is tested, it becomes live
-            if (flags_tested)
+            if (flagsTested)
             {
-                flags_live = flags_live | flags_tested;
-                printf("\tnew live flags: %s\n", format_flags_mask(flags_live).c_str());
+                flagsLive = flagsLive | flagsTested;
+                printf("\tnew live flags: %s\n", formatFlagsMask(flagsLive).c_str());
             }
 
-            if (regs_read)
+            if (regsRead)
             {
-                regs_live = regs_live | regs_read;
-                printf("\tnew live regs: %s\n", format_regs_mask(regs_live).c_str());
+                regsLive = regsLive | regsRead;
+                printf("\tnew live regs: %s\n", formatRegsMask(regsLive).c_str());
             }
 
             // Store the liveness state for the instruction
-            data->flags_live = flags_live;
-            data->regs_live  = regs_live;
+            data->flagsLive = flagsLive;
+            data->regsLive  = regsLive;
 
-            if (flags_modified)
+            if (flagsModified)
             {
                 // If the flag is modified, it becomes dead
-                flags_live = flags_live & ~flags_modified;
+                flagsLive = flagsLive & ~flagsModified;
             }
 
-            if (regs_written)
+            if (regsWritten)
             {
                 // If the register is written, it becomes dead
-                regs_live = regs_live & ~regs_written;
+                regsLive = regsLive & ~regsWritten;
             }
 
-            printf("\tfinal live flags: %s\n", format_flags_mask(data->flags_live).c_str());
-            printf("\tfinal live regs: %s\n", format_regs_mask(data->regs_live).c_str());
+            printf("\tfinal live flags: %s\n", formatFlagsMask(data->flagsLive).c_str());
+            printf("\tfinal live regs: %s\n", formatRegsMask(data->regsLive).c_str());
         }
     }
 
-    auto to_hex = [](uint64_t value)
+    auto toHex = [](uint64_t value)
     {
         char buffer[64] = "";
         sprintf_s(buffer, "\"0x%llX\"", value);
@@ -501,12 +638,12 @@ static bool analyze_riscvm_run(Context& ctx)
     std::string dot = "digraph G {\n";
     for (const auto& [address, block] : blocks)
     {
-        dot += to_hex(address) + " [label=\"" + program.getLabelData(block.label).value().name + "\"];\n";
+        dot += toHex(address) + " [label=\"" + program.getLabelData(block.label).value().name + "\"];\n";
         for (const auto& successor : block.successors)
         {
             auto data = program.getLabelData(successor).value().node->getUserData<InstructionData>();
-            auto successor_address = data->address;
-            dot += to_hex(address) + " -> " + to_hex(successor_address) + ";\n";
+            auto successorAddress = data->address;
+            dot += toHex(address) + " -> " + toHex(successorAddress) + ";\n";
         }
     }
 
@@ -517,154 +654,14 @@ static bool analyze_riscvm_run(Context& ctx)
     return true;
 }
 
-static bool disassemble_riscvm_run(Context& ctx, const uint64_t function_start, const std::vector<uint8_t>& code)
-{
-    Program& program = ctx.program;
-
-    puts("=== DISASSEMBLE ===");
-    zasm::Decoder  decoder(program.getMode());
-    x86::Assembler assembler(program);
-
-    auto entry_label = assembler.createLabel("riscvm_run");
-    assembler.bind(entry_label);
-    ctx.add_instruction_data(assembler.getCursor(), function_start, {});
-    program.setEntryPoint(entry_label);
-
-    std::map<uint64_t, Node*> nodes;
-    std::map<uint64_t, Label> labels;
-
-    size_t offset = 0;
-    while (offset < code.size())
-    {
-        auto cur_address = function_start + offset;
-        auto decoder_res = decoder.decode(code.data() + offset, code.size() - offset, cur_address);
-        if (!decoder_res)
-        {
-            std::cout << "Failed to decode at " << std::hex << cur_address << ", "
-                      << decoder_res.error().getErrorName() << "\n";
-            return false;
-        }
-
-        nodes.emplace(cur_address, assembler.getCursor());
-
-        const auto& detail = *decoder_res;
-        const auto  instr  = detail.getInstruction();
-        auto        length = detail.getLength();
-        offset += length;
-
-        auto str = formatter::toString(&instr, formatter::Options::HexImmediates);
-        printf("0x%llX|%s\n", cur_address, str.c_str());
-
-        auto emit = [&]
-        {
-            if (auto res = assembler.emit(instr); res != zasm::ErrorCode::None)
-            {
-                std::cout << "Failed to emit instruction " << std::hex << cur_address << ", "
-                          << res.getErrorName() << "\n";
-                return false;
-            }
-            ctx.add_instruction_data(assembler.getCursor(), cur_address, detail);
-            return true;
-        };
-
-        auto create_label = [&](uint64_t dest)
-        {
-            auto itr = labels.find(dest);
-            if (itr == labels.end())
-            {
-                char name[64] = "";
-                sprintf_s(name, "label_%llX", dest);
-                auto label = assembler.createLabel(name);
-                itr        = labels.emplace(dest, label).first;
-            }
-            return itr->second;
-        };
-
-        switch (detail.getCategory())
-        {
-        case x86::Category::UncondBR:
-        {
-            auto dest = detail.getOperand<Imm>(0).value<uint64_t>();
-            printf("UncondBR: 0x%llX\n", dest);
-            assembler.emit(detail.getMnemonic(), create_label(dest));
-            ctx.add_instruction_data(assembler.getCursor(), cur_address, detail);
-        }
-        break;
-
-        case x86::Category::CondBr:
-        {
-            auto brtrue  = detail.getOperand<Imm>(0).value<uint64_t>();
-            auto brfalse = offset + function_start;
-            create_label(brfalse);
-            printf("CondBr: 0x%llX, 0x%llX\n", brtrue, brfalse);
-            assembler.emit(detail.getMnemonic(), create_label(brtrue));
-            ctx.add_instruction_data(assembler.getCursor(), cur_address, detail);
-        }
-        break;
-
-        case x86::Category::Call:
-        {
-            auto dest = detail.getOperand(0);
-            if (dest.getIf<Imm>() != nullptr)
-            {
-                printf("unsupported call imm\n");
-                return false;
-            }
-
-            if (!emit())
-            {
-                return false;
-            }
-        }
-        break;
-
-        case x86::Category::Ret:
-        {
-            if (!emit())
-            {
-                return false;
-            }
-        }
-        break;
-
-        default:
-        {
-            if (!emit())
-            {
-                return false;
-            }
-        }
-        break;
-        }
-    }
-
-    for (const auto& [address, label] : labels)
-    {
-        auto node = nodes.at(address);
-        assembler.setCursor(node);
-        assembler.bind(label);
-        auto detail = *node->get<Instruction>().getDetail(program.getMode());
-        ctx.add_instruction_data(assembler.getCursor(), address, detail);
-    }
-
-    assembler.setCursor(program.getTail());
-    assembler.bind(assembler.createLabel("end"));
-
-    puts("");
-    std::string text = formatter::toString(program);
-    puts(text.c_str());
-
-    return true;
-}
-
-static bool obfuscate_riscvm_run(Context& ctx)
+static bool obfuscateRiscvmRun(Context& ctx)
 {
     Program&       program = ctx.program;
     x86::Assembler assembler(program);
 
     puts("=== OBFUSCATE === ");
-    auto entry_node = program.getLabelData(program.getEntryPoint()).value().node;
-    for (auto node = entry_node; node != nullptr;)
+    auto entryNode = program.getLabelData(program.getEntryPoint()).value().node;
+    for (auto node = entryNode; node != nullptr;)
     {
         auto next = node->getNext();
         if (auto instr = node->getIf<Instruction>(); instr != nullptr)
@@ -696,7 +693,7 @@ typedef void (*riscvm_run_t)(vm::riscvm*);
 
 #include "../../riscvm/isa-tests/data.h"
 
-static bool run_isa_tests(riscvm_run_t riscvm_run, const std::vector<std::string>& filter = {})
+static bool runIsaTests(riscvm_run_t riscvmRun, const std::vector<std::string>& filter = {})
 {
     using namespace vm;
 
@@ -733,7 +730,7 @@ static bool run_isa_tests(riscvm_run_t riscvm_run, const std::vector<std::string
         auto   self = &vm;
         reg_write(reg_sp, (uint64_t)&g_stack[sizeof(g_stack) - 0x10]);
         self->pc = (int64_t)g_code + test.offset;
-        riscvm_run(self);
+        riscvmRun(self);
 
         auto status = (int)reg_read(reg_a0);
         if (status != 0)
@@ -759,54 +756,44 @@ int main(int argc, char** argv)
     }
 
     std::vector<uint8_t> pe;
-    if (!load_file(argv[1], pe))
+    if (!loadFile(argv[1], pe))
     {
         puts("Failed to load the executable.");
         return EXIT_FAILURE;
     }
 
     std::vector<uint8_t> payload;
-    if (!load_file(argv[2], payload))
+    if (!loadFile(argv[2], payload))
     {
         puts("Failed to load the payload.");
         return EXIT_FAILURE;
     }
 
-    uint64_t             riscvm_run_address = 0;
-    std::vector<uint8_t> riscvm_run_code;
-    if (!find_riscvm_run(pe, riscvm_run_address, riscvm_run_code))
+    uint64_t             riscvmRunAddress = 0;
+    std::vector<uint8_t> riscvmRunCode;
+    if (!findRiscvmRun(pe, riscvmRunAddress, riscvmRunCode))
     {
         puts("Failed to find riscvm_run function.");
         return EXIT_FAILURE;
     }
 
-    printf("riscvm_run address: 0x%llX, size: 0x%zX\n", riscvm_run_address, riscvm_run_code.size());
-
-#if 0
-    for (size_t i = 0; i < riscvm_run_code.size(); i++)
-    {
-        if (i > 0 && i % 32 == 0)
-            puts("");
-        printf("%02X ", riscvm_run_code[i]);
-    }
-    puts("");
-#endif
+    printf("riscvm_run address: 0x%llX, size: 0x%zX\n", riscvmRunAddress, riscvmRunCode.size());
 
     Program program(MachineMode::AMD64);
     Context ctx(program);
-    if (!disassemble_riscvm_run(ctx, riscvm_run_address, riscvm_run_code))
+    if (!disassembleRiscvmRun(ctx, riscvmRunAddress, riscvmRunCode))
     {
         puts("Failed to disassemble riscvm_run function.");
         return EXIT_FAILURE;
     }
 
-    if (!analyze_riscvm_run(ctx))
+    if (!analyzeRiscvmRun(ctx))
     {
         puts("Failed to analyze the riscvm_run function.");
         return false;
     }
 
-    if (!obfuscate_riscvm_run(ctx))
+    if (!obfuscateRiscvmRun(ctx))
     {
         puts("Failed to obfuscate riscvm_run function.");
         return EXIT_FAILURE;
@@ -835,9 +822,9 @@ int main(int argc, char** argv)
     auto size = serializer.getCodeSize();
 
     memcpy(shellcode, ptr, size);
-    auto riscvm_run = (riscvm_run_t)shellcode;
+    auto riscvmRun = (riscvm_run_t)shellcode;
 
-    run_isa_tests(riscvm_run);
+    runIsaTests(riscvmRun);
 
     // Execute the full payload
     {
@@ -845,7 +832,7 @@ int main(int argc, char** argv)
         riscvm vm       = {0};
         vm.pc           = (int64_t)payload.data();
         vm.regs[reg_sp] = (uint64_t)(uint64_t)&g_stack[sizeof(g_stack) - 0x10];
-        riscvm_run(&vm);
+        riscvmRun(&vm);
     }
 
     return EXIT_SUCCESS;
