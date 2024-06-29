@@ -132,8 +132,104 @@ static bool find_riscvm_run(const std::vector<uint8_t>& pe, uint64_t& address, s
     return false;
 }
 
-static bool analyze_riscvm_run(Program& program)
+static std::string format_flags_mask(uint32_t mask)
 {
+    std::string result;
+#define FLAG(x)   \
+    if (mask & x) \
+    result += (#x + 14), result += " "
+    FLAG(ZYDIS_CPUFLAG_CF);
+    FLAG(ZYDIS_CPUFLAG_PF);
+    FLAG(ZYDIS_CPUFLAG_AF);
+    FLAG(ZYDIS_CPUFLAG_ZF);
+    FLAG(ZYDIS_CPUFLAG_SF);
+    FLAG(ZYDIS_CPUFLAG_TF);
+    FLAG(ZYDIS_CPUFLAG_IF);
+    FLAG(ZYDIS_CPUFLAG_DF);
+    FLAG(ZYDIS_CPUFLAG_OF);
+    FLAG(ZYDIS_CPUFLAG_NT);
+    FLAG(ZYDIS_CPUFLAG_RF);
+    FLAG(ZYDIS_CPUFLAG_VM);
+    FLAG(ZYDIS_CPUFLAG_AC);
+    FLAG(ZYDIS_CPUFLAG_VIF);
+    FLAG(ZYDIS_CPUFLAG_VIP);
+    FLAG(ZYDIS_CPUFLAG_ID);
+#undef FLAG
+    if (!result.empty())
+        result.pop_back();
+    return "(" + result + ")";
+}
+
+static std::string format_regs_mask(uint64_t mask)
+{
+    std::string result;
+#define REG(x)                                     \
+    if (mask & (1ULL << (x - ZYDIS_REGISTER_RAX))) \
+    result += (#x + 15), result += " "
+    REG(ZYDIS_REGISTER_RAX);
+    REG(ZYDIS_REGISTER_RBX);
+    REG(ZYDIS_REGISTER_RCX);
+    REG(ZYDIS_REGISTER_RDX);
+    REG(ZYDIS_REGISTER_RSP);
+    REG(ZYDIS_REGISTER_RBP);
+    REG(ZYDIS_REGISTER_RSI);
+    REG(ZYDIS_REGISTER_RDI);
+    REG(ZYDIS_REGISTER_R8);
+    REG(ZYDIS_REGISTER_R9);
+    REG(ZYDIS_REGISTER_R10);
+    REG(ZYDIS_REGISTER_R11);
+    REG(ZYDIS_REGISTER_R12);
+    REG(ZYDIS_REGISTER_R13);
+    REG(ZYDIS_REGISTER_R14);
+    REG(ZYDIS_REGISTER_R15);
+#undef REG
+    if (!result.empty())
+        result.pop_back();
+    return "(" + result + ")";
+}
+
+struct InstructionData
+{
+    uint64_t          address = 0;
+    InstructionDetail detail;
+    uint32_t          flags_modified = 0;
+    uint32_t          flags_tested   = 0;
+    uint32_t          flags_live     = 0;
+    uint32_t          regs_written   = 0;
+    uint32_t          regs_read      = 0;
+    uint32_t          regs_live      = 0;
+};
+
+struct Context
+{
+    Program& program;
+
+    explicit Context(Program& program) : program(program)
+    {
+    }
+
+    InstructionData* add_instruction_data(Node* node, uint64_t address, const InstructionDetail& detail)
+    {
+        auto instructionData = node->getUserData<InstructionData>();
+        if (instructionData == nullptr)
+        {
+            instructionDataPool.emplace_back();
+            instructionData          = &instructionDataPool.back();
+            instructionData->address = address;
+            instructionData->detail  = detail;
+            node->setUserData(instructionData);
+        }
+        return instructionData;
+    }
+
+  private:
+    std::deque<InstructionData> instructionDataPool;
+};
+
+static bool analyze_riscvm_run(Context& ctx)
+{
+    Program& program = ctx.program;
+    auto     mode    = program.getMode();
     puts("=== ANALYZE ===");
     std::vector<Label> queue;
     queue.push_back(program.getEntryPoint());
@@ -166,45 +262,18 @@ static bool analyze_riscvm_run(Program& program)
         visisted.insert(block_start_label.getId());
 
         const auto& label_data    = *program.getLabelData(block_start_label);
-        auto        block_address = label_data.node->getUserDataU64();
+        auto        block_address = label_data.node->getUserData<InstructionData>()->address;
 
         BasicBlock bb;
         bb.address = block_address;
         bb.label   = block_start_label;
         bb.begin   = label_data.node->getNext();
-
-        printf("<==> Disassembling block: %s (0x%llX)\n", label_data.name, block_address);
-
-        uint32_t live_flags = 0;
-
-        auto format_flags = [](uint32_t mask)
+        if (bb.begin == nullptr)
         {
-            std::string result;
-#define FLAG(x)   \
-    if (mask & x) \
-        result += (#x + 14), result += " ";
-            FLAG(ZYDIS_CPUFLAG_CF);
-            FLAG(ZYDIS_CPUFLAG_PF);
-            FLAG(ZYDIS_CPUFLAG_AF);
-            FLAG(ZYDIS_CPUFLAG_ZF);
-            FLAG(ZYDIS_CPUFLAG_SF);
-            FLAG(ZYDIS_CPUFLAG_TF);
-            FLAG(ZYDIS_CPUFLAG_IF);
-            FLAG(ZYDIS_CPUFLAG_DF);
-            FLAG(ZYDIS_CPUFLAG_OF);
-            FLAG(ZYDIS_CPUFLAG_IOPL);
-            FLAG(ZYDIS_CPUFLAG_NT);
-            FLAG(ZYDIS_CPUFLAG_RF);
-            FLAG(ZYDIS_CPUFLAG_VM);
-            FLAG(ZYDIS_CPUFLAG_AC);
-            FLAG(ZYDIS_CPUFLAG_VIF);
-            FLAG(ZYDIS_CPUFLAG_VIP);
-            FLAG(ZYDIS_CPUFLAG_ID);
-#undef FLAG
-            if (!result.empty())
-                result.pop_back();
-            return "(" + result + ")";
-        };
+            puts("empty block!");
+            __debugbreak();
+        }
+        printf("<==> Disassembling block: %s (0x%llX)\n", label_data.name, block_address);
 
         auto node     = label_data.node->getNext();
         bool finished = false;
@@ -220,36 +289,12 @@ static bool analyze_riscvm_run(Program& program)
                 break;
             }
 
-            auto user_data = node->getUserDataU64();
+            auto instruction_data = node->getUserData<InstructionData>();
 
             auto str = formatter::toString(program, instr, formatter::Options::HexImmediates);
-            printf("0x%llX|%s|live=%s\n", user_data, str.c_str(), format_flags(live_flags).c_str());
+            printf("0x%llX|%s\n", instruction_data->address, str.c_str());
 
-            // TODO: why isn't all this stored in the Instruction?
-            auto info = *instr->getDetail(program.getMode());
-
-            const auto& flags         = info.getCPUFlags();
-            auto        modified_mask = flags.set0 | flags.set1 | flags.modified | flags.undefined;
-            printf(
-                "\tset0: %s, set1: %s, modified: %s, undefined: %s\n",
-                format_flags(flags.set0.value()).c_str(),
-                format_flags(flags.set1.value()).c_str(),
-                format_flags(flags.modified.value()).c_str(),
-                format_flags(flags.undefined.value()).c_str()
-            );
-            printf("\tall_modified: %s\n", format_flags(modified_mask).c_str());
-            printf("\ttested: %s\n", format_flags(flags.tested.value()).c_str());
-
-            if (flags.tested.value() & live_flags)
-            {
-                printf("Live flags are tested: %s\n", format_flags(flags.tested.value() & live_flags).c_str());
-            }
-
-            if (modified_mask.value() != 0)
-            {
-                live_flags = modified_mask;
-            }
-
+            auto info = *instr->getDetail(mode);
             switch (info.getCategory())
             {
             case x86::Category::UncondBR:
@@ -294,7 +339,6 @@ static bool analyze_riscvm_run(Program& program)
 
             default:
             {
-                // TODO: update flag liveness
             }
             break;
             }
@@ -303,6 +347,11 @@ static bool analyze_riscvm_run(Program& program)
         }
 
         bb.end = node;
+        if (bb.end == nullptr)
+        {
+            puts("empty block!");
+            __debugbreak();
+        }
 
         blocks.emplace(bb.address, bb);
     }
@@ -313,9 +362,132 @@ static bool analyze_riscvm_run(Program& program)
     {
         for (const auto& successor : block.successors)
         {
-            auto successor_address = program.getLabelData(successor).value().node->getUserDataU64();
+            auto instruction_data = program.getLabelData(successor).value().node->getUserData<InstructionData>();
+            auto successor_address = instruction_data->address;
             successors[address].insert(successor_address);
             predecessors[successor_address].insert(address);
+        }
+    }
+
+    for (auto& [address, block] : blocks)
+    {
+        auto str = formatter::toString(program, block.begin, block.end, formatter::Options::HexImmediates);
+        printf("Analyzing block 0x%llX\n==========\n%s\n==========\n", address, str.c_str());
+
+        InstrCPUFlags flags_live = 0;
+        uint32_t      regs_live  = 0;
+        for (auto node = block.end->getPrev(); node != block.begin->getPrev(); node = node->getPrev())
+        {
+            auto  data   = node->getUserData<InstructionData>();
+            auto& detail = data->detail;
+
+            auto instrText = formatter::toString(program, node, formatter::Options::HexImmediates);
+            printf("0x%llX|%s\n", data->address, instrText.c_str());
+
+            auto reg_mask = [](const Reg& reg) -> uint64_t
+            {
+                if (!reg.isValid() || reg == x86::rip || reg == x86::rflags)
+                {
+                    return 0;
+                }
+
+                if (!reg.isGp())
+                {
+                    auto regText = formatter::toString(reg);
+                    printf("\tunsupported register type %s\n", regText.c_str());
+                    return 0;
+                }
+
+                auto mask = 1ULL << reg.getIndex();
+#ifdef _DEBUG
+                auto maskText = format_regs_mask(mask);
+                auto regText  = formatter::toString(reg);
+                for (auto& ch : regText)
+                    ch = std::toupper(ch);
+                regText = "(" + regText + ")";
+                if (maskText != regText)
+                    __debugbreak();
+#endif
+                return mask;
+            };
+
+            uint32_t regs_read    = 0;
+            uint32_t regs_written = 0;
+            for (size_t i = 0; i < detail.getOperandCount(); i++)
+            {
+                const auto& operand = detail.getOperand(i);
+                if (auto reg = operand.getIf<Reg>())
+                {
+                    auto access = detail.getOperandAccess(i);
+                    if ((uint8_t)(access & Operand::Access::MaskRead))
+                    {
+                        regs_read |= reg_mask(reg->getRoot(mode));
+                    }
+                    if ((uint8_t)(access & Operand::Access::MaskWrite))
+                    {
+                        regs_written |= reg_mask(reg->getRoot(mode));
+                    }
+                }
+                else if (auto mem = operand.getIf<Mem>())
+                {
+                    regs_read |= reg_mask(mem->getBase().getRoot(mode));
+                    regs_read |= reg_mask(mem->getIndex().getRoot(mode));
+                }
+            }
+            data->regs_read    = regs_read;
+            data->regs_written = regs_written;
+
+            const auto& flags          = detail.getCPUFlags();
+            auto        flags_modified = flags.set0 | flags.set1 | flags.modified | flags.undefined;
+            auto        flags_tested   = flags.tested;
+            printf("\tflags modified: %s\n", format_flags_mask(flags_modified).c_str());
+            printf("\tflags tested: %s\n", format_flags_mask(flags_tested).c_str());
+            printf("\tregs read: %s\n", format_regs_mask(regs_read).c_str());
+            printf("\tregs written: %s\n", format_regs_mask(regs_written).c_str());
+            data->flags_modified = flags_modified;
+            data->flags_tested   = flags_tested;
+
+            if (flags_modified & flags_live)
+            {
+                printf("\tlive flags are modified: %s\n", format_flags_mask(flags_modified & flags_live).c_str());
+            }
+
+            if (flags_tested & flags_live)
+            {
+                printf("\tlive flags are tested: %s\n", format_flags_mask(flags_tested & flags_live).c_str());
+            }
+
+            // If the flag is tested, it becomes live
+            if (flags_tested)
+            {
+                flags_live = flags_live | flags_tested;
+                printf("\tnew live flags: %s\n", format_flags_mask(flags_live).c_str());
+            }
+
+            if (regs_read)
+            {
+                regs_live = regs_live | regs_read;
+                printf("\tnew live regs: %s\n", format_regs_mask(regs_live).c_str());
+            }
+
+            // Store the liveness state for the instruction
+            data->flags_live = flags_live;
+            data->regs_live  = regs_live;
+
+            if (flags_modified)
+            {
+                // If the flag is modified, it becomes dead
+                flags_live = flags_live & ~flags_modified;
+            }
+
+            if (regs_written)
+            {
+                // If the register is written, it becomes dead
+                regs_live = regs_live & ~regs_written;
+            }
+
+            printf("\tfinal live flags: %s\n", format_flags_mask(data->flags_live).c_str());
+            printf("\tfinal live regs: %s\n", format_regs_mask(data->regs_live).c_str());
         }
     }
 
@@ -332,7 +504,8 @@ static bool analyze_riscvm_run(Program& program)
         dot += to_hex(address) + " [label=\"" + program.getLabelData(block.label).value().name + "\"];\n";
         for (const auto& successor : block.successors)
         {
-            auto successor_address = program.getLabelData(successor).value().node->getUserDataU64();
+            auto data = program.getLabelData(successor).value().node->getUserData<InstructionData>();
+            auto successor_address = data->address;
             dot += to_hex(address) + " -> " + to_hex(successor_address) + ";\n";
         }
     }
@@ -344,15 +517,17 @@ static bool analyze_riscvm_run(Program& program)
     return true;
 }
 
-static bool disassemble_riscvm_run(Program& program, const uint64_t function_start, const std::vector<uint8_t>& code)
+static bool disassemble_riscvm_run(Context& ctx, const uint64_t function_start, const std::vector<uint8_t>& code)
 {
+    Program& program = ctx.program;
+
     puts("=== DISASSEMBLE ===");
     zasm::Decoder  decoder(program.getMode());
     x86::Assembler assembler(program);
 
     auto entry_label = assembler.createLabel("riscvm_run");
     assembler.bind(entry_label);
-    assembler.getCursor()->setUserData(function_start);
+    ctx.add_instruction_data(assembler.getCursor(), function_start, {});
     program.setEntryPoint(entry_label);
 
     std::map<uint64_t, Node*> nodes;
@@ -372,9 +547,9 @@ static bool disassemble_riscvm_run(Program& program, const uint64_t function_sta
 
         nodes.emplace(cur_address, assembler.getCursor());
 
-        const auto& info   = *decoder_res;
-        const auto  instr  = info.getInstruction();
-        auto        length = info.getLength();
+        const auto& detail = *decoder_res;
+        const auto  instr  = detail.getInstruction();
+        auto        length = detail.getLength();
         offset += length;
 
         auto str = formatter::toString(&instr, formatter::Options::HexImmediates);
@@ -388,7 +563,7 @@ static bool disassemble_riscvm_run(Program& program, const uint64_t function_sta
                           << res.getErrorName() << "\n";
                 return false;
             }
-            assembler.getCursor()->setUserData(cur_address);
+            ctx.add_instruction_data(assembler.getCursor(), cur_address, detail);
             return true;
         };
 
@@ -405,31 +580,31 @@ static bool disassemble_riscvm_run(Program& program, const uint64_t function_sta
             return itr->second;
         };
 
-        switch (info.getCategory())
+        switch (detail.getCategory())
         {
         case x86::Category::UncondBR:
         {
-            auto dest = info.getOperand<Imm>(0).value<uint64_t>();
+            auto dest = detail.getOperand<Imm>(0).value<uint64_t>();
             printf("UncondBR: 0x%llX\n", dest);
-            assembler.emit(info.getMnemonic(), create_label(dest));
-            assembler.getCursor()->setUserData(cur_address);
+            assembler.emit(detail.getMnemonic(), create_label(dest));
+            ctx.add_instruction_data(assembler.getCursor(), cur_address, detail);
         }
         break;
 
         case x86::Category::CondBr:
         {
-            auto brtrue  = info.getOperand<Imm>(0).value<uint64_t>();
+            auto brtrue  = detail.getOperand<Imm>(0).value<uint64_t>();
             auto brfalse = offset + function_start;
             create_label(brfalse);
             printf("CondBr: 0x%llX, 0x%llX\n", brtrue, brfalse);
-            assembler.emit(info.getMnemonic(), create_label(brtrue));
-            assembler.getCursor()->setUserData(cur_address);
+            assembler.emit(detail.getMnemonic(), create_label(brtrue));
+            ctx.add_instruction_data(assembler.getCursor(), cur_address, detail);
         }
         break;
 
         case x86::Category::Call:
         {
-            auto dest = info.getOperand(0);
+            auto dest = detail.getOperand(0);
             if (dest.getIf<Imm>() != nullptr)
             {
                 printf("unsupported call imm\n");
@@ -468,8 +643,12 @@ static bool disassemble_riscvm_run(Program& program, const uint64_t function_sta
         auto node = nodes.at(address);
         assembler.setCursor(node);
         assembler.bind(label);
-        assembler.getCursor()->setUserData(address);
+        auto detail = *node->get<Instruction>().getDetail(program.getMode());
+        ctx.add_instruction_data(assembler.getCursor(), address, detail);
     }
+
+    assembler.setCursor(program.getTail());
+    assembler.bind(assembler.createLabel("end"));
 
     puts("");
     std::string text = formatter::toString(program);
@@ -478,15 +657,9 @@ static bool disassemble_riscvm_run(Program& program, const uint64_t function_sta
     return true;
 }
 
-static bool obfuscate_riscvm_run(Program& program)
+static bool obfuscate_riscvm_run(Context& ctx)
 {
-    if (!analyze_riscvm_run(program))
-    {
-        return false;
-    }
-
-    return true;
-
+    Program&       program = ctx.program;
     x86::Assembler assembler(program);
 
     puts("=== OBFUSCATE === ");
@@ -620,13 +793,20 @@ int main(int argc, char** argv)
 #endif
 
     Program program(MachineMode::AMD64);
-    if (!disassemble_riscvm_run(program, riscvm_run_address, riscvm_run_code))
+    Context ctx(program);
+    if (!disassemble_riscvm_run(ctx, riscvm_run_address, riscvm_run_code))
     {
         puts("Failed to disassemble riscvm_run function.");
         return EXIT_FAILURE;
     }
 
-    if (!obfuscate_riscvm_run(program))
+    if (!analyze_riscvm_run(ctx))
+    {
+        puts("Failed to analyze the riscvm_run function.");
+        return false;
+    }
+
+    if (!obfuscate_riscvm_run(ctx))
     {
         puts("Failed to obfuscate riscvm_run function.");
         return EXIT_FAILURE;
