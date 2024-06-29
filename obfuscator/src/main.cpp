@@ -186,16 +186,44 @@ static std::string formatRegsMask(uint64_t mask)
     return "(" + result + ")";
 }
 
+static uint32_t regMask(const Reg& reg)
+{
+    if (!reg.isValid() || reg == x86::rip || reg == x86::rflags)
+    {
+        return 0;
+    }
+
+    if (!reg.isGp())
+    {
+        auto regText = formatter::toString(reg);
+        printf("\tunsupported register type %s\n", regText.c_str());
+        return 0;
+    }
+
+    auto mask = 1u << reg.getIndex();
+#ifdef _DEBUG
+    auto maskText = formatRegsMask(mask);
+    auto regText  = formatter::toString(reg);
+    for (auto& ch : regText)
+        ch = std::toupper(ch);
+    regText = "(" + regText + ")";
+    if (maskText != regText)
+        __debugbreak();
+#endif
+    return mask;
+}
+
 struct InstructionData
 {
     uint64_t          address = 0;
     InstructionDetail detail;
-    uint32_t          flagsModified = 0;
-    uint32_t          flagsTested   = 0;
-    uint32_t          flagsLive     = 0;
+    InstrCPUFlags     flagsModified = 0;
+    InstrCPUFlags     flagsTested   = 0;
     uint32_t          regsWritten   = 0;
     uint32_t          regsRead      = 0;
-    uint32_t          regsLive      = 0;
+
+    InstrCPUFlags flagsLive = 0;
+    uint32_t      regsLive  = 0;
 };
 
 struct Context
@@ -206,18 +234,50 @@ struct Context
     {
     }
 
-    InstructionData* addInstructionData(Node* node, uint64_t address, const InstructionDetail& detail)
+    InstructionData*
+    addInstructionData(Node* node, uint64_t address, MachineMode mode, const InstructionDetail& detail)
     {
-        auto instructionData = node->getUserData<InstructionData>();
-        if (instructionData == nullptr)
+        auto data = node->getUserData<InstructionData>();
+        if (data == nullptr)
         {
             instructionDataPool.emplace_back();
-            instructionData          = &instructionDataPool.back();
-            instructionData->address = address;
-            instructionData->detail  = detail;
-            node->setUserData(instructionData);
+            data          = &instructionDataPool.back();
+            data->address = address;
+            data->detail  = detail;
+
+            // Populate the registers read and written by the instruction
+            uint32_t regsRead    = 0;
+            uint32_t regsWritten = 0;
+            for (size_t i = 0; i < detail.getOperandCount(); i++)
+            {
+                const auto& operand = detail.getOperand(i);
+                if (auto reg = operand.getIf<Reg>())
+                {
+                    auto access = detail.getOperandAccess(i);
+                    if ((uint8_t)(access & Operand::Access::MaskRead))
+                    {
+                        data->regsRead |= regMask(reg->getRoot(mode));
+                    }
+                    if ((uint8_t)(access & Operand::Access::MaskWrite))
+                    {
+                        data->regsWritten |= regMask(reg->getRoot(mode));
+                    }
+                }
+                else if (auto mem = operand.getIf<Mem>())
+                {
+                    data->regsRead |= regMask(mem->getBase().getRoot(mode));
+                    data->regsRead |= regMask(mem->getIndex().getRoot(mode));
+                }
+            }
+
+            // Populate the flags modified and tested by the instruction
+            const auto& flags   = detail.getCPUFlags();
+            data->flagsModified = flags.set0 | flags.set1 | flags.modified | flags.undefined;
+            data->flagsTested   = flags.tested;
+
+            node->setUserData(data);
         }
-        return instructionData;
+        return data;
     }
 
   private:
@@ -227,14 +287,15 @@ struct Context
 static bool disassembleRiscvmRun(Context& ctx, const uint64_t functionStart, const std::vector<uint8_t>& code)
 {
     Program& program = ctx.program;
+    auto     mode    = program.getMode();
 
     puts("=== DISASSEMBLE ===");
-    zasm::Decoder  decoder(program.getMode());
+    zasm::Decoder  decoder(mode);
     x86::Assembler assembler(program);
 
     auto entryLabel = assembler.createLabel("riscvm_run");
     assembler.bind(entryLabel);
-    ctx.addInstructionData(assembler.getCursor(), functionStart, {});
+    ctx.addInstructionData(assembler.getCursor(), functionStart, mode, {});
     program.setEntryPoint(entryLabel);
 
     std::map<uint64_t, Node*> nodes;
@@ -270,7 +331,7 @@ static bool disassembleRiscvmRun(Context& ctx, const uint64_t functionStart, con
                           << res.getErrorName() << "\n";
                 return false;
             }
-            ctx.addInstructionData(assembler.getCursor(), curAddress, detail);
+            ctx.addInstructionData(assembler.getCursor(), curAddress, mode, detail);
             return true;
         };
 
@@ -294,7 +355,7 @@ static bool disassembleRiscvmRun(Context& ctx, const uint64_t functionStart, con
             auto dest = detail.getOperand<Imm>(0).value<uint64_t>();
             printf("UncondBR: 0x%llX\n", dest);
             assembler.emit(detail.getMnemonic(), createLabel(dest));
-            ctx.addInstructionData(assembler.getCursor(), curAddress, detail);
+            ctx.addInstructionData(assembler.getCursor(), curAddress, mode, detail);
         }
         break;
 
@@ -305,7 +366,7 @@ static bool disassembleRiscvmRun(Context& ctx, const uint64_t functionStart, con
             createLabel(brfalse);
             printf("CondBr: 0x%llX, 0x%llX\n", brtrue, brfalse);
             assembler.emit(detail.getMnemonic(), createLabel(brtrue));
-            ctx.addInstructionData(assembler.getCursor(), curAddress, detail);
+            ctx.addInstructionData(assembler.getCursor(), curAddress, mode, detail);
         }
         break;
 
@@ -350,8 +411,8 @@ static bool disassembleRiscvmRun(Context& ctx, const uint64_t functionStart, con
         auto node = nodes.at(address);
         assembler.setCursor(node);
         assembler.bind(label);
-        auto detail = *node->get<Instruction>().getDetail(program.getMode());
-        ctx.addInstructionData(assembler.getCursor(), address, detail);
+        auto detail = *node->get<Instruction>().getDetail(mode);
+        ctx.addInstructionData(assembler.getCursor(), address, mode, detail);
     }
 
     assembler.setCursor(program.getTail());
@@ -506,6 +567,7 @@ static bool analyzeRiscvmRun(Context& ctx)
         }
     }
 
+    // Compute liveness backwards for each block individually
     for (auto& [address, block] : blocks)
     {
         auto str = formatter::toString(program, block.begin, block.end, formatter::Options::HexImmediates);
@@ -521,68 +583,14 @@ static bool analyzeRiscvmRun(Context& ctx)
             auto instrText = formatter::toString(program, node, formatter::Options::HexImmediates);
             printf("0x%llX|%s\n", data->address, instrText.c_str());
 
-            auto regMask = [](const Reg& reg) -> uint64_t
-            {
-                if (!reg.isValid() || reg == x86::rip || reg == x86::rflags)
-                {
-                    return 0;
-                }
-
-                if (!reg.isGp())
-                {
-                    auto regText = formatter::toString(reg);
-                    printf("\tunsupported register type %s\n", regText.c_str());
-                    return 0;
-                }
-
-                auto mask = 1ULL << reg.getIndex();
-#ifdef _DEBUG
-                auto maskText = formatRegsMask(mask);
-                auto regText  = formatter::toString(reg);
-                for (auto& ch : regText)
-                    ch = std::toupper(ch);
-                regText = "(" + regText + ")";
-                if (maskText != regText)
-                    __debugbreak();
-#endif
-                return mask;
-            };
-
-            uint32_t regsRead    = 0;
-            uint32_t regsWritten = 0;
-            for (size_t i = 0; i < detail.getOperandCount(); i++)
-            {
-                const auto& operand = detail.getOperand(i);
-                if (auto reg = operand.getIf<Reg>())
-                {
-                    auto access = detail.getOperandAccess(i);
-                    if ((uint8_t)(access & Operand::Access::MaskRead))
-                    {
-                        regsRead |= regMask(reg->getRoot(mode));
-                    }
-                    if ((uint8_t)(access & Operand::Access::MaskWrite))
-                    {
-                        regsWritten |= regMask(reg->getRoot(mode));
-                    }
-                }
-                else if (auto mem = operand.getIf<Mem>())
-                {
-                    regsRead |= regMask(mem->getBase().getRoot(mode));
-                    regsRead |= regMask(mem->getIndex().getRoot(mode));
-                }
-            }
-            data->regsRead    = regsRead;
-            data->regsWritten = regsWritten;
-
-            const auto& flags         = detail.getCPUFlags();
-            auto        flagsModified = flags.set0 | flags.set1 | flags.modified | flags.undefined;
-            auto        flagsTested   = flags.tested;
+            auto flagsModified = data->flagsModified;
+            auto flagsTested   = data->flagsTested;
             printf("\tflags modified: %s\n", formatFlagsMask(flagsModified).c_str());
             printf("\tflags tested: %s\n", formatFlagsMask(flagsTested).c_str());
+            auto regsRead = data->regsRead;
             printf("\tregs read: %s\n", formatRegsMask(regsRead).c_str());
+            auto regsWritten = data->regsWritten;
             printf("\tregs written: %s\n", formatRegsMask(regsWritten).c_str());
-            data->flagsModified = flagsModified;
-            data->flagsTested   = flagsTested;
 
             if (flagsModified & flagsLive)
             {
@@ -646,7 +654,6 @@ static bool analyzeRiscvmRun(Context& ctx)
             dot += toHex(address) + " -> " + toHex(successorAddress) + ";\n";
         }
     }
-
     dot += "}";
 
     puts(dot.c_str());
