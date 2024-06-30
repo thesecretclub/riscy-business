@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <vector>
 #include <deque>
+#include <queue>
 #include <map>
 #include <set>
 
@@ -434,10 +435,6 @@ static bool analyzeRiscvmRun(Context& ctx)
     queue.push_back(program.getEntryPoint());
     std::set<Label::Id> visisted;
 
-    // References:
-    // - https://en.wikipedia.org/wiki/Live-variable_analysis
-    // - https://en.wikipedia.org/wiki/Dominator_(graph_theory)
-
     struct BasicBlock
     {
         uint64_t           address = 0;
@@ -445,10 +442,20 @@ static bool analyzeRiscvmRun(Context& ctx)
         Node*              begin = nullptr;
         Node*              end   = nullptr;
         std::vector<Label> successors;
+
+        uint32_t regsGen     = 0;
+        uint32_t regsKill    = 0;
+        uint32_t regsLiveIn  = 0;
+        uint32_t regsLiveOut = 0;
+
+        InstrCPUFlags flagsGen     = 0;
+        InstrCPUFlags flagsKill    = 0;
+        InstrCPUFlags flagsLiveIn  = 0;
+        InstrCPUFlags flagsLiveOut = 0;
     };
 
     std::map<uint64_t, BasicBlock> blocks;
-
+    std::set<uint64_t>             exits;
     while (!queue.empty())
     {
         auto blockStartLabel = queue.back();
@@ -532,6 +539,7 @@ static bool analyzeRiscvmRun(Context& ctx)
             case x86::Category::Ret:
             {
                 finished = true;
+                exits.insert(bb.address);
             }
             break;
 
@@ -554,15 +562,19 @@ static bool analyzeRiscvmRun(Context& ctx)
         blocks.emplace(bb.address, bb);
     }
 
-    std::map<uint64_t, std::set<uint64_t>> successors;
+    // Compute the predecessors for each block
     std::map<uint64_t, std::set<uint64_t>> predecessors;
+    for (const auto& [address, _] : blocks)
+    {
+        predecessors[address] = {};
+    }
+
     for (const auto& [address, block] : blocks)
     {
         for (const auto& successor : block.successors)
         {
             auto data = program.getLabelData(successor).value().node->getUserData<InstructionData>();
             auto successorAddress = data->address;
-            successors[address].insert(successorAddress);
             predecessors[successorAddress].insert(address);
         }
     }
@@ -634,6 +646,87 @@ static bool analyzeRiscvmRun(Context& ctx)
             printf("\tfinal live flags: %s\n", formatFlagsMask(data->flagsLive).c_str());
             printf("\tfinal live regs: %s\n", formatRegsMask(data->regsLive).c_str());
         }
+    }
+
+    // Perform liveness analysis on the control flow graph
+    // https://en.wikipedia.org/wiki/Live-variable_analysis
+
+    // TODO: confirm this statement
+    // water: "Dominator tree would not work for this, because it
+    // does not take into account the next iteration of the loop"
+
+    // Compute the GEN and KILL sets for each block
+    for (auto& [address, block] : blocks)
+    {
+        auto str = formatter::toString(program, block.begin, block.end, formatter::Options::HexImmediates);
+        printf("Analyzing block 0x%llX\n==========\n%s\n==========\n", address, str.c_str());
+
+        for (auto node = block.begin; node != block.end; node = node->getNext())
+        {
+            auto  data   = node->getUserData<InstructionData>();
+            auto& detail = data->detail;
+
+            auto instrText = formatter::toString(program, node, formatter::Options::HexImmediates);
+            printf("0x%llX|%s\n", data->address, instrText.c_str());
+
+            printf("\tregs read: %s\n", formatRegsMask(data->regsRead).c_str());
+            printf("\tregs written: %s\n", formatRegsMask(data->regsWritten).c_str());
+            printf("\tflags tested: %s\n", formatFlagsMask(data->flagsTested).c_str());
+            printf("\tflags modified: %s\n", formatFlagsMask(data->flagsModified).c_str());
+
+            block.regsGen |= data->regsRead & ~block.regsKill;
+            block.regsKill |= data->regsWritten;
+            block.flagsGen  = block.flagsGen | (data->flagsTested & ~block.flagsKill);
+            block.flagsKill = block.flagsKill | data->flagsModified;
+        }
+
+        printf("regs_gen: %s\n", formatRegsMask(block.regsGen).c_str());
+        printf("regs_kill: %s\n", formatRegsMask(block.regsKill).c_str());
+        printf("flags_gen: %s\n", formatFlagsMask(block.flagsGen).c_str());
+        printf("flags_kill: %s\n", formatFlagsMask(block.flagsKill).c_str());
+    }
+
+    // Solve the dataflow equations
+    std::queue<uint64_t> worklist;
+    for (auto exit : exits)
+    {
+        worklist.push(exit);
+    }
+    while (!worklist.empty())
+    {
+        auto address = worklist.front();
+        worklist.pop();
+
+        auto& block          = blocks.at(address);
+        auto  newRegsLiveIn  = block.regsGen | (block.regsLiveOut & ~block.regsKill);
+        auto  newFlagsLiveIn = block.flagsGen | (block.flagsLiveOut & ~block.flagsKill);
+        if (newRegsLiveIn != block.regsLiveIn || newFlagsLiveIn != block.flagsLiveIn)
+        {
+            // Update the LIVEin sets
+            block.regsLiveIn  = newRegsLiveIn;
+            block.flagsLiveIn = newFlagsLiveIn;
+
+            // Update the LIVEout sets in the predecessors and add them to the worklist
+            for (const auto& predecessor : predecessors.at(address))
+            {
+                auto& predecessorBlock = blocks.at(predecessor);
+                predecessorBlock.regsLiveOut |= newRegsLiveIn;
+                predecessorBlock.flagsLiveOut = predecessorBlock.flagsLiveOut | newFlagsLiveIn;
+                worklist.push(predecessor);
+            }
+        }
+    }
+
+    // Print the results
+    for (const auto& [address, block] : blocks)
+    {
+        auto str = formatter::toString(program, block.begin, block.end, formatter::Options::HexImmediates);
+        printf("Results for block 0x%llX\n==========\n%s\n==========\n", address, str.c_str());
+
+        printf("\tregs_live_in: %s\n", formatRegsMask(block.regsLiveIn).c_str());
+        printf("\tregs_live_out: %s\n", formatRegsMask(block.regsLiveOut).c_str());
+        printf("\tflags_live_in: %s\n", formatFlagsMask(block.flagsLiveIn).c_str());
+        printf("\tflags_live_out: %s\n", formatFlagsMask(block.flagsLiveOut).c_str());
     }
 
     auto toHex = [](uint64_t value)
