@@ -3,10 +3,6 @@
 
 cmake_minimum_required(VERSION 3.15)
 
-# Enable support for MSVC_RUNTIME_LIBRARY
-cmake_policy(SET CMP0091 NEW)
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
 	message(FATAL_ERROR "In-tree builds are not supported. Run CMake from a separate directory: cmake -B build")
 endif()
@@ -28,6 +24,12 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 	configure_file(cmake.toml cmake.toml COPYONLY)
 endif()
 
+# Enable support for MSVC_RUNTIME_LIBRARY
+cmake_policy(SET CMP0091 NEW)
+if(NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
+	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 project(obfuscator)
 
 include(FetchContent)
@@ -36,23 +38,14 @@ include(FetchContent)
 if(POLICY CMP0135)
 	cmake_policy(SET CMP0135 NEW)
 endif()
-message(STATUS "Fetching zasm (5bf4e65220057a373a595c1054d1a7d844d1c630)...")
+message(STATUS "Fetching zasm (a18fa34251b161cc18e4c0fc385dee7cea104cfd)...")
 FetchContent_Declare(zasm
 	GIT_REPOSITORY
 		"https://github.com/zyantific/zasm"
 	GIT_TAG
-		5bf4e65220057a373a595c1054d1a7d844d1c630
+		a18fa34251b161cc18e4c0fc385dee7cea104cfd
 )
 FetchContent_MakeAvailable(zasm)
-
-message(STATUS "Fetching phnt...")
-FetchContent_Declare(phnt
-	URL
-		"https://github.com/mrexodia/phnt-single-header/releases/download/v1.3-a2cff0e0/phnt.zip"
-	URL_HASH
-		SHA256=63209192966dfe96fc8ad2991480f57f908c9e579a61fe8a89b0ea4587b498e2
-)
-FetchContent_MakeAvailable(phnt)
 
 # Target: obfuscator
 set(obfuscator_SOURCES
@@ -71,7 +64,6 @@ target_compile_features(obfuscator PRIVATE
 
 target_link_libraries(obfuscator PRIVATE
 	zasm::zasm
-	phnt::phnt
 )
 
 get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)

@@ -4,14 +4,10 @@ msvc-runtime = "static"
 
 [fetch-content.zasm]
 git = "https://github.com/zyantific/zasm"
-tag = "5bf4e65220057a373a595c1054d1a7d844d1c630"
-
-[fetch-content.phnt]
-url = "https://github.com/mrexodia/phnt-single-header/releases/download/v1.3-a2cff0e0/phnt.zip"
-sha256 = "63209192966dfe96fc8ad2991480f57f908c9e579a61fe8a89b0ea4587b498e2"
+tag = "a18fa34251b161cc18e4c0fc385dee7cea104cfd"
 
 [target.obfuscator]
 type = "executable"
 sources = ["src/main.cpp"]
 compile-features = ["cxx_std_17"]
-link-libraries = ["zasm::zasm", "phnt::phnt"]
+link-libraries = ["zasm::zasm"]

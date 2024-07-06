@@ -35,13 +35,13 @@ project(riscvm)
 
 # Target: riscvm
 set(riscvm_SOURCES
+	cmake.toml
 	main.cpp
+	opcodes.h
 	riscvm.cpp
 	riscvm.h
-	opcodes.h
 	shuffled_opcodes.h
 	trace.h
-	cmake.toml
 )
 
 add_executable(riscvm)
@@ -111,9 +111,9 @@ endif()
 
 # Target: tests
 set(tests_SOURCES
-	tests.cpp
-	riscvm.cpp
 	cmake.toml
+	riscvm.cpp
+	tests.cpp
 )
 
 add_executable(tests)
@@ -143,8 +143,8 @@ endif()
 
 # Target: riscvm-crt0
 set(riscvm-crt0_SOURCES
-	"lib/crt0.c"
 	cmake.toml
+	"lib/crt0.c"
 )
 
 add_custom_target(riscvm-crt0 SOURCES)

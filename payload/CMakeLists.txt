@@ -3,10 +3,6 @@
 
 cmake_minimum_required(VERSION 3.19)
 
-# Enable support for MSVC_RUNTIME_LIBRARY
-cmake_policy(SET CMP0091 NEW)
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
 	message(FATAL_ERROR "In-tree builds are not supported. Run CMake from a separate directory: cmake -B build")
 endif()
@@ -28,6 +24,12 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 	configure_file(cmake.toml cmake.toml COPYONLY)
 endif()
 
+# Enable support for MSVC_RUNTIME_LIBRARY
+cmake_policy(SET CMP0091 NEW)
+if(NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
+	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 set(CMAKE_CONFIGURATION_TYPES Debug Release)
 
 project(payload)
@@ -36,8 +38,8 @@ include("cmake/riscvm.cmake")
 
 # Target: riscvm-crt0
 set(riscvm-crt0_SOURCES
-	"crt/riscvm-crt0.cpp"
 	cmake.toml
+	"crt/riscvm-crt0.cpp"
 )
 
 add_library(riscvm-crt0 SHARED)
@@ -47,11 +49,11 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${riscvm-crt0_SOURCES})
 
 # Target: payload
 set(payload_SOURCES
-	"src/main.cpp"
+	cmake.toml
 	"crt/minicrt.c"
 	"crt/minicrt.cpp"
 	"include/phnt.h"
-	cmake.toml
+	"src/main.cpp"
 )
 
 add_riscvm_executable(payload)

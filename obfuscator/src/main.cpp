@@ -14,7 +14,7 @@ namespace vm
 #include <zasm/zasm.hpp>
 #include <zasm/formatter/formatter.hpp>
 
-#include <phnt.h>
+#include <Windows.h>
 
 using namespace zasm;
 

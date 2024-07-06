@@ -34,9 +34,9 @@ find_package(LLVM-Wrapper REQUIRED)
 
 # Target: transpiler
 set(transpiler_SOURCES
+	cmake.toml
 	"src/transpiler.cpp"
 	"src/utility.hpp"
-	cmake.toml
 )
 
 add_executable(transpiler)
