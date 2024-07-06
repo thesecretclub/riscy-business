@@ -285,12 +285,15 @@ struct Context
     std::deque<InstructionData> instructionDataPool;
 };
 
-static bool disassembleRiscvmRun(Context& ctx, const uint64_t functionStart, const std::vector<uint8_t>& code)
+static bool disassembleRiscvmRun(
+    Context& ctx, const uint64_t functionStart, const std::vector<uint8_t>& code, bool verbose = false
+)
 {
     Program& program = ctx.program;
     auto     mode    = program.getMode();
 
-    puts("=== DISASSEMBLE ===");
+    if (verbose)
+        puts("=== DISASSEMBLE ===");
     zasm::Decoder  decoder(mode);
     x86::Assembler assembler(program);
 
@@ -322,7 +325,8 @@ static bool disassembleRiscvmRun(Context& ctx, const uint64_t functionStart, con
         offset += length;
 
         auto str = formatter::toString(&instr, formatter::Options::HexImmediates);
-        printf("0x%llX|%s\n", curAddress, str.c_str());
+        if (verbose)
+            printf("0x%llX|%s\n", curAddress, str.c_str());
 
         auto emit = [&]
         {
@@ -354,7 +358,8 @@ static bool disassembleRiscvmRun(Context& ctx, const uint64_t functionStart, con
         case x86::Category::UncondBR:
         {
             auto dest = detail.getOperand<Imm>(0).value<uint64_t>();
-            printf("UncondBR: 0x%llX\n", dest);
+            if (verbose)
+                printf("UncondBR: 0x%llX\n", dest);
             assembler.emit(detail.getMnemonic(), createLabel(dest));
             ctx.addInstructionData(assembler.getCursor(), curAddress, mode, detail);
         }
@@ -365,7 +370,8 @@ static bool disassembleRiscvmRun(Context& ctx, const uint64_t functionStart, con
             auto brtrue  = detail.getOperand<Imm>(0).value<uint64_t>();
             auto brfalse = offset + functionStart;
             createLabel(brfalse);
-            printf("CondBr: 0x%llX, 0x%llX\n", brtrue, brfalse);
+            if (verbose)
+                printf("CondBr: 0x%llX, 0x%llX\n", brtrue, brfalse);
             assembler.emit(detail.getMnemonic(), createLabel(brtrue));
             ctx.addInstructionData(assembler.getCursor(), curAddress, mode, detail);
         }
@@ -419,9 +425,12 @@ static bool disassembleRiscvmRun(Context& ctx, const uint64_t functionStart, con
     assembler.setCursor(program.getTail());
     assembler.bind(assembler.createLabel("end"));
 
-    puts("");
-    std::string text = formatter::toString(program);
-    puts(text.c_str());
+    if (verbose)
+    {
+        puts("");
+        std::string text = formatter::toString(program);
+        puts(text.c_str());
+    }
 
     return true;
 }
