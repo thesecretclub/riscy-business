@@ -261,7 +261,11 @@ struct Context
                     }
                     if ((uint8_t)(access & Operand::Access::MaskWrite))
                     {
-                        data->regsWritten |= regMask(reg->getRoot(mode));
+                        // mov al, 66 does not kill rax
+                        if (reg->isGp32() || reg->isGp64())
+                        {
+                            data->regsWritten |= regMask(reg->getRoot(mode));
+                        }
                     }
                 }
                 else if (auto mem = operand.getIf<Mem>())
