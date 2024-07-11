@@ -941,7 +941,7 @@ static bool runIsaTests(riscvm_run_t riscvmRun, const std::vector<std::string>& 
         }
     }
     printf("\n%d/%d tests successful (%.2f%%)\n", successful, total, successful * 1.0f / total * 100);
-    return successful == total ? EXIT_SUCCESS : EXIT_FAILURE;
+    return successful == total;
 }
 
 int main(int argc, char** argv)
@@ -1021,7 +1021,8 @@ int main(int argc, char** argv)
     memcpy(shellcode, ptr, size);
     auto riscvmRun = (riscvm_run_t)shellcode;
 
-    runIsaTests(riscvmRun);
+    if (!runIsaTests(riscvmRun))
+        __debugbreak();
 
     // Execute the full payload
     {
