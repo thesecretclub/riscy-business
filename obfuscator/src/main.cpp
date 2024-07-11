@@ -187,6 +187,32 @@ static std::string formatRegsMask(uint64_t mask)
     return "(" + result + ")";
 }
 
+static std::vector<x86::Gp> maskToRegs(uint64_t mask)
+{
+    std::vector<x86::Gp> result;
+#define REG(x)                                     \
+    if (mask & (1ULL << (x - ZYDIS_REGISTER_RAX))) \
+        result.emplace_back(static_cast<Reg::Id>(x));
+    REG(ZYDIS_REGISTER_RAX);
+    REG(ZYDIS_REGISTER_RBX);
+    REG(ZYDIS_REGISTER_RCX);
+    REG(ZYDIS_REGISTER_RDX);
+    REG(ZYDIS_REGISTER_RSP);
+    REG(ZYDIS_REGISTER_RBP);
+    REG(ZYDIS_REGISTER_RSI);
+    REG(ZYDIS_REGISTER_RDI);
+    REG(ZYDIS_REGISTER_R8);
+    REG(ZYDIS_REGISTER_R9);
+    REG(ZYDIS_REGISTER_R10);
+    REG(ZYDIS_REGISTER_R11);
+    REG(ZYDIS_REGISTER_R12);
+    REG(ZYDIS_REGISTER_R13);
+    REG(ZYDIS_REGISTER_R14);
+    REG(ZYDIS_REGISTER_R15);
+#undef REG
+    return result;
+}
+
 static uint32_t regMask(const Reg& reg)
 {
     if (!reg.isValid() || reg == x86::rip || reg == x86::rflags)
@@ -856,18 +882,36 @@ static bool obfuscateRiscvmRun(Context& ctx)
     Program&       program = ctx.program;
     x86::Assembler assembler(program);
 
+    // Ideas:
+    // - After a branch, put a cmov into a live register that we know will never trigger
+    // - Block shuffling
+    // - Move into dead registers that were live before somewhere
+    // - Add dead code
+    // - Replace cmp with arithmetic into recently-live registers
+    // - Instruction substitution
+    // - Add nops
+    // - Add opaque predicates (into middle of instructions)
+    // - Sprinkle a little unicorn detection (maybe in-payload only)
+
     puts("=== OBFUSCATE === ");
+    srand(1337);
     auto entryNode = program.getLabelData(program.getEntryPoint()).value().node;
     for (auto node = entryNode; node != nullptr;)
     {
         auto next = node->getNext();
         if (auto instr = node->getIf<Instruction>(); instr != nullptr)
         {
+            auto data = node->getUserData<InstructionData>();
             assembler.setCursor(node->getPrev());
-            // TODO: actual obfuscation
-            assembler.nop();
+
+            auto regsDeadMask = ~data->regsLive;
+            auto regsDead     = maskToRegs(regsDeadMask);
+            for (auto deadReg : regsDead)
+            {
+                assembler.mov(deadReg, Imm(rand()));
+            }
         }
-        puts(formatter::toString(program, node).c_str());
+
         node = next;
     }
     return true;
