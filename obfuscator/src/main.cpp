@@ -285,8 +285,9 @@ struct Context
                 // The call instruction clobbers all volatile registers
                 data->regsWritten = regMask(x86::rax) | regMask(x86::rcx) | regMask(x86::rdx)
                                   | regMask(x86::r8) | regMask(x86::r9) | regMask(x86::r10) | regMask(x86::r11);
-                // The call instruction reads the first 4 arguments from rcx, rdx, r8, r9
-                data->regsRead = regMask(x86::rcx) | regMask(x86::rdx) | regMask(x86::r8) | regMask(x86::r9);
+                // The call instruction reads the first 4 arguments from rcx, rdx, r8, r9 (and rsp because mishap said so)
+                data->regsRead = regMask(x86::rcx) | regMask(x86::rdx) | regMask(x86::r8) | regMask(x86::r9)
+                               | regMask(x86::rsp);
             }
 
             node->setUserData(data);
