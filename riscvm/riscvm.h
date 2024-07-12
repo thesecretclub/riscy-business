@@ -38,7 +38,9 @@ extern bool g_trace;
 #define panic(...) __debugbreak()
 #endif
 
-#if defined(__GNUC__) || defined(__clang__)
+#if defined(__clang__)
+#define ALWAYS_INLINE __attribute__((always_inline)) inline
+#elif defined(__GNUC__)
 #define ALWAYS_INLINE [[gnu::always_inline]] inline
 #elif defined(_MSC_VER)
 #define ALWAYS_INLINE __forceinline
@@ -48,7 +50,9 @@ extern bool g_trace;
 #define ALWAYS_INLINE
 #endif
 
-#if defined(__GNUC__) || defined(__clang__)
+#if defined(__clang__)
+#define NEVER_INLINE __attribute__((noinline))
+#elif defined(__GNUC__)
 #define NEVER_INLINE [[gnu::noinline]]
 #elif defined(_MSC_VER)
 #define NEVER_INLINE __declspec(noinline)
@@ -280,4 +284,11 @@ ALWAYS_INLINE int32_t bit_signer(uint32_t field, uint32_t size)
 }
 
 void riscvm_loadfile(riscvm_ptr self, const char* filename);
-extern "C" __declspec(dllexport) void riscvm_run(riscvm_ptr self);
+
+#ifdef _MSC_VER
+#define DLLEXPORT __declspec(dllexport)
+#else
+#define DLLEXPORT
+#endif
+
+extern "C" DLLEXPORT void riscvm_run(riscvm_ptr self);
