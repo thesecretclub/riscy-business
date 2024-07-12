@@ -970,6 +970,7 @@ uint8_t g_stack[0x10000] __attribute__((aligned(0x1000)));
 typedef void (*riscvm_run_t)(vm::riscvm*);
 
 #ifdef _WIN32
+#include <Windows.h>
 #include "../../riscvm/isa-tests/data.h"
 
 static bool runIsaTests(riscvm_run_t riscvmRun, const std::vector<std::string>& filter = {})
