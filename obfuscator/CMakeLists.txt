@@ -59,7 +59,7 @@ target_sources(obfuscator PRIVATE ${obfuscator_SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${obfuscator_SOURCES})
 
 target_compile_features(obfuscator PRIVATE
-	cxx_std_17
+	cxx_std_20
 )
 
 target_link_libraries(obfuscator PRIVATE

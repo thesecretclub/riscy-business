@@ -6,6 +6,35 @@
 #include <map>
 #include <set>
 
+#include "linux-pe/linuxpe"
+#include "linux-pe/nt/directories/dir_exceptions.hpp"
+#include "linux-pe/nt/directories/dir_export.hpp"
+#include "linux-pe/nt/nt_headers.hpp"
+#include "linux-pe/nt/optional_header.hpp"
+
+#ifndef _WIN32
+template <size_t Count, class... Args> int sprintf_s(char (&Dest)[Count], const char* fmt, Args... args)
+{
+    return snprintf(Dest, Count, fmt, args...);
+}
+
+inline size_t strcpy_s(char* dst, size_t size, const char* src)
+{
+    return strlcpy(dst, src, size);
+}
+
+inline int fopen_s(FILE** fp, const char* filename, const char* mode)
+{
+    *fp = fopen(filename, mode);
+    return errno;
+}
+
+static void __debugbreak()
+{
+    __builtin_debugtrap();
+}
+#endif // _WIN32
+
 namespace vm
 {
 #include "../../riscvm/riscvm.h"
@@ -13,8 +42,6 @@ namespace vm
 
 #include <zasm/zasm.hpp>
 #include <zasm/formatter/formatter.hpp>
-
-#include <Windows.h>
 
 using namespace zasm;
 
@@ -41,22 +68,22 @@ static bool loadFile(const char* path, std::vector<uint8_t>& data)
 static bool findRiscvmRun(const std::vector<uint8_t>& pe, uint64_t& address, std::vector<uint8_t>& functionCode)
 {
     // Iterate export directory and look for 'riscvm_run'
-    auto pdh = (IMAGE_DOS_HEADER*)pe.data();
-    if (pdh->e_magic != IMAGE_DOS_SIGNATURE)
+    auto pdh = (win::dos_header_t*)pe.data();
+    if (pdh->e_magic != win::DOS_HDR_MAGIC)
     {
         puts("Invalid DOS header.");
         return false;
     }
 
-    auto pnth = (IMAGE_NT_HEADERS*)((uint8_t*)pe.data() + pdh->e_lfanew);
-    if (pnth->Signature != IMAGE_NT_SIGNATURE)
+    auto pnth = (win::nt_headers_x64_t*)((uint8_t*)pe.data() + pdh->e_lfanew);
+    if (pnth->signature != win::NT_HDR_MAGIC)
     {
         puts("Invalid NT header.");
         return false;
     }
 
-    auto poh = &pnth->OptionalHeader;
-    if (poh->Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC)
+    auto poh = &pnth->optional_header;
+    if (poh->magic != win::OPT_HDR64_MAGIC)
     {
         puts("Invalid optional header.");
         return false;
@@ -64,35 +91,30 @@ static bool findRiscvmRun(const std::vector<uint8_t>& pe, uint64_t& address, std
 
     auto rva2offset = [&](uint32_t rva) -> uint32_t
     {
-        auto section = IMAGE_FIRST_SECTION(pnth);
-        for (int i = 0; i < pnth->FileHeader.NumberOfSections; i++)
+        for (const auto& section : pnth->sections())
         {
-            if (rva >= section->VirtualAddress && rva < section->VirtualAddress + section->Misc.VirtualSize)
+            if (rva >= section.virtual_address && rva < section.virtual_address + section.virtual_size)
             {
-                return rva - section->VirtualAddress + section->PointerToRawData;
+                return rva - section.virtual_address + section.ptr_raw_data;
             }
-
-            section++;
         }
-
         return 0;
     };
 
     // Print all exports and the function rva
     uint32_t riscvmRunRva  = 0;
-    auto     dataDirExport = poh->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
-    auto exportDir = (IMAGE_EXPORT_DIRECTORY*)((uint8_t*)pe.data() + rva2offset(dataDirExport.VirtualAddress));
-    for (DWORD i = 0; i < exportDir->NumberOfNames; i++)
+    auto     dataDirExport = poh->data_directories.export_directory;
+    auto     exportDir     = (win::export_directory_t*)((uint8_t*)pe.data() + rva2offset(dataDirExport.rva));
+    for (uint32_t i = 0; i < exportDir->num_names; i++)
     {
-        auto addressOfNames = (uint32_t*)((uint8_t*)pe.data() + rva2offset(exportDir->AddressOfNames));
+        auto addressOfNames = (uint32_t*)((uint8_t*)pe.data() + rva2offset(exportDir->rva_names));
         auto name           = (const char*)((uint8_t*)pe.data() + rva2offset(addressOfNames[i]));
 
-        auto addressOfNameOrdinals =
-            (uint16_t*)((uint8_t*)pe.data() + rva2offset(exportDir->AddressOfNameOrdinals));
+        auto addressOfNameOrdinals = (uint16_t*)((uint8_t*)pe.data() + rva2offset(exportDir->rva_name_ordinals));
         auto nameOrdinal = addressOfNameOrdinals[i];
 
-        auto addressOfFunctions = (uint32_t*)((uint8_t*)pe.data() + rva2offset(exportDir->AddressOfFunctions));
-        auto functionAddress = addressOfFunctions[nameOrdinal];
+        auto addressOfFunctions = (uint32_t*)((uint8_t*)pe.data() + rva2offset(exportDir->rva_functions));
+        auto functionAddress    = addressOfFunctions[nameOrdinal];
 
         if (strcmp(name, "riscvm_run") == 0)
         {
@@ -108,17 +130,16 @@ static bool findRiscvmRun(const std::vector<uint8_t>& pe, uint64_t& address, std
     }
 
     // Get function range from RUNTIME_FUNCTION
-    auto dataDirException = poh->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION];
-    auto exceptionDir =
-        (IMAGE_RUNTIME_FUNCTION_ENTRY*)((uint8_t*)pe.data() + rva2offset(dataDirException.VirtualAddress));
-    for (int i = 0; i < dataDirException.Size / sizeof(IMAGE_RUNTIME_FUNCTION_ENTRY); i++)
+    auto dataDirException = poh->data_directories.exception_directory;
+    auto exceptionDir = (win::runtime_function_t*)((uint8_t*)pe.data() + rva2offset(dataDirException.rva));
+    for (int i = 0; i < dataDirException.size / sizeof(win::runtime_function_t); i++)
     {
         auto runtimeFunction = &exceptionDir[i];
-        if (runtimeFunction->BeginAddress == riscvmRunRva)
+        if (runtimeFunction->rva_begin == riscvmRunRva)
         {
-            auto size = runtimeFunction->EndAddress - runtimeFunction->BeginAddress;
+            auto size = runtimeFunction->rva_end - runtimeFunction->rva_begin;
 
-            address = poh->ImageBase + riscvmRunRva;
+            address = poh->image_base + riscvmRunRva;
             functionCode.resize(size);
 
             auto offset = rva2offset(riscvmRunRva);
@@ -136,7 +157,7 @@ static std::string formatFlagsMask(uint32_t mask)
     std::string result;
 #define FLAG(x)   \
     if (mask & x) \
-    result += (#x + 14), result += " "
+    result += (&(#x)[14]), result += " "
     FLAG(ZYDIS_CPUFLAG_CF);
     FLAG(ZYDIS_CPUFLAG_PF);
     FLAG(ZYDIS_CPUFLAG_AF);
@@ -164,7 +185,7 @@ static std::string formatRegsMask(uint64_t mask)
     std::string result;
 #define REG(x)                                     \
     if (mask & (1ULL << (x - ZYDIS_REGISTER_RAX))) \
-    result += (#x + 15), result += " "
+    result += (&(#x)[15]), result += " "
     REG(ZYDIS_REGISTER_RAX);
     REG(ZYDIS_REGISTER_RBX);
     REG(ZYDIS_REGISTER_RCX);
@@ -323,10 +344,10 @@ struct Context
 
             case x86::Category::Ret:
             {
-                // The ret instruction 'reads' all nonvolatile registers
+                // The ret instruction 'reads' all nonvolatile registers and the return value
                 data->regsRead = regMask(x86::rsp) | regMask(x86::rbx) | regMask(x86::rbp) | regMask(x86::rsi)
                                | regMask(x86::rdi) | regMask(x86::r12) | regMask(x86::r13) | regMask(x86::r14)
-                               | regMask(x86::r15);
+                               | regMask(x86::r15) | regMask(x86::rax);
             }
             break;
             }
@@ -947,6 +968,7 @@ uint8_t g_stack[0x10000] __attribute__((aligned(0x1000)));
 
 typedef void (*riscvm_run_t)(vm::riscvm*);
 
+#ifdef _WIN32
 #include "../../riscvm/isa-tests/data.h"
 
 static bool runIsaTests(riscvm_run_t riscvmRun, const std::vector<std::string>& filter = {})
@@ -1002,6 +1024,7 @@ static bool runIsaTests(riscvm_run_t riscvmRun, const std::vector<std::string>& 
     printf("\n%d/%d tests successful (%.2f%%)\n", successful, total, successful * 1.0f / total * 100);
     return successful == total;
 }
+#endif
 
 int main(int argc, char** argv)
 {
@@ -1046,7 +1069,7 @@ int main(int argc, char** argv)
     if (!analyzeRiscvmRun(ctx))
     {
         puts("Failed to analyze the riscvm_run function.");
-        return false;
+        return EXIT_FAILURE;
     }
 
     if (!obfuscateRiscvmRun(ctx))
@@ -1059,6 +1082,7 @@ int main(int argc, char** argv)
     std::string text = formatter::toString(program);
     puts(text.c_str());
 
+#ifdef _WIN32
     auto shellcode = VirtualAlloc(nullptr, 0x10000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
     if (shellcode == nullptr)
     {
@@ -1091,6 +1115,7 @@ int main(int argc, char** argv)
         vm.regs[reg_sp] = (uint64_t)(uint64_t)&g_stack[sizeof(g_stack) - 0x10];
         riscvmRun(&vm);
     }
+#endif
 
     return EXIT_SUCCESS;
 }
