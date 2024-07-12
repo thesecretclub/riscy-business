@@ -306,7 +306,11 @@ struct Context
             data->flagsModified = flags.set0 | flags.set1 | flags.modified | flags.undefined;
             data->flagsTested   = flags.tested;
 
-            if (detail.getCategory() == x86::Category::Call)
+            // Special handling for call and ret instructions to properly support the calling conventions
+            // https://learn.microsoft.com/en-us/cpp/build/x64-software-conventions?view=msvc-170#x64-register-usage
+            switch (detail.getCategory())
+            {
+            case x86::Category::Call:
             {
                 // The call instruction clobbers all volatile registers
                 data->regsWritten = regMask(x86::rax) | regMask(x86::rcx) | regMask(x86::rdx)
@@ -314,6 +318,17 @@ struct Context
                 // The call instruction reads the first 4 arguments from rcx, rdx, r8, r9 (and rsp because mishap said so)
                 data->regsRead = regMask(x86::rcx) | regMask(x86::rdx) | regMask(x86::r8) | regMask(x86::r9)
                                | regMask(x86::rsp);
+            }
+            break;
+
+            case x86::Category::Ret:
+            {
+                // The ret instruction 'reads' all nonvolatile registers
+                data->regsRead = regMask(x86::rsp) | regMask(x86::rbx) | regMask(x86::rbp) | regMask(x86::rsi)
+                               | regMask(x86::rdi) | regMask(x86::r12) | regMask(x86::r13) | regMask(x86::r14)
+                               | regMask(x86::r15);
+            }
+            break;
             }
 
             node->setUserData(data);
