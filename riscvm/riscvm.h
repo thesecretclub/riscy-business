@@ -39,7 +39,7 @@ extern bool g_trace;
 #endif
 
 #if defined(__GNUC__) || defined(__clang__)
-#define ALWAYS_INLINE [[gnu::always_inline]]
+#define ALWAYS_INLINE [[gnu::always_inline]] inline
 #elif defined(_MSC_VER)
 #define ALWAYS_INLINE __forceinline
 #elif __STDC_VERSION__ >= 199901L
@@ -269,12 +269,12 @@ template <typename T> ALWAYS_INLINE void riscvm_write(uint64_t addr, T val)
     memcpy((void*)addr, &val, sizeof(val));
 }
 
-ALWAYS_INLINE inline void* riscvm_getptr(riscvm_ptr self, uint64_t addr)
+ALWAYS_INLINE void* riscvm_getptr(riscvm_ptr self, uint64_t addr)
 {
     return (void*)addr;
 }
 
-ALWAYS_INLINE inline int32_t bit_signer(uint32_t field, uint32_t size)
+ALWAYS_INLINE int32_t bit_signer(uint32_t field, uint32_t size)
 {
     return (field & (1U << (size - 1))) ? (int32_t)(field | (0xFFFFFFFFU << size)) : (int32_t)field;
 }
