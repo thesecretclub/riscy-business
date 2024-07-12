@@ -1,3 +1,4 @@
+#include <fstream>
 #include <iostream>
 #include <cstdlib>
 #include <vector>
@@ -1028,9 +1029,9 @@ static bool runIsaTests(riscvm_run_t riscvmRun, const std::vector<std::string>& 
 
 int main(int argc, char** argv)
 {
-    if (argc < 3)
+    if (argc < 2)
     {
-        puts("Usage: obfuscator riscvm.exe payload.bin");
+        puts("Usage: obfuscator riscvm.exe [payload.bin]");
         return EXIT_FAILURE;
     }
 
@@ -1038,13 +1039,6 @@ int main(int argc, char** argv)
     if (!loadFile(argv[1], pe))
     {
         puts("Failed to load the executable.");
-        return EXIT_FAILURE;
-    }
-
-    std::vector<uint8_t> payload;
-    if (!loadFile(argv[2], payload))
-    {
-        puts("Failed to load the payload.");
         return EXIT_FAILURE;
     }
 
@@ -1082,6 +1076,26 @@ int main(int argc, char** argv)
     std::string text = formatter::toString(program);
     puts(text.c_str());
 
+    // Serialize the obfuscated function
+    uint64_t   shellcodeBase = 0;
+    Serializer serializer;
+    if (auto res = serializer.serialize(program, shellcodeBase); res != zasm::ErrorCode::None)
+    {
+        std::cout << "Failed to serialize program at " << std::hex << shellcodeBase << ", "
+                  << res.getErrorName() << "\n";
+        return EXIT_FAILURE;
+    }
+
+    auto ptr  = serializer.getCode();
+    auto size = serializer.getCodeSize();
+
+    // Save the obfuscated code to disk
+    {
+        std::ofstream ofs("riscvm_run_obfuscated.bin", std::ios::binary);
+        ofs.write((char*)ptr, size);
+    }
+
+    // Run the ISA tests (Windows only)
 #ifdef _WIN32
     auto shellcode = VirtualAlloc(nullptr, 0x10000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
     if (shellcode == nullptr)
@@ -1090,25 +1104,22 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    Serializer serializer;
-    if (auto res = serializer.serialize(program, (uint64_t)shellcode); res != zasm::ErrorCode::None)
-    {
-        std::cout << "Failed to serialize program at " << std::hex << (uint64_t)shellcode << ", "
-                  << res.getErrorName() << "\n";
-        return EXIT_FAILURE;
-    }
-
-    auto ptr  = serializer.getCode();
-    auto size = serializer.getCodeSize();
-
     memcpy(shellcode, ptr, size);
     auto riscvmRun = (riscvm_run_t)shellcode;
 
     if (!runIsaTests(riscvmRun))
         __debugbreak();
 
-    // Execute the full payload
+    // Run the payload if specified on the command line
+    if (argc > 2)
     {
+        std::vector<uint8_t> payload;
+        if (!loadFile(argv[2], payload))
+        {
+            puts("Failed to load the payload.");
+            return EXIT_FAILURE;
+        }
+
         using namespace vm;
         riscvm vm       = {0};
         vm.pc           = (int64_t)payload.data();

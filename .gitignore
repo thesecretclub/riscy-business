@@ -1,5 +1,7 @@
 build*/
 *venv*/
+.cache/
+.DS_Store
 
 *.bin
 *.elf
