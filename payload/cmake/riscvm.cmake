@@ -36,7 +36,7 @@ set(CRT0_OBJ "${CMAKE_CURRENT_BINARY_DIR}/crt0.o")
 configure_file("${CRT0_SRC}" crt0.c COPYONLY)
 set(RV64_FLAGS -target riscv64 -march=rv64im -mcmodel=medany -fno-exceptions -fshort-wchar -Os)
 execute_process(
-    COMMAND "${CLANG_EXECUTABLE}" -x c ${RV64_FLAGS} -c "${CRT0_SRC}" -o "${CRT0_OBJ}"
+    COMMAND "${CLANG_EXECUTABLE}" -x c ${RV64_FLAGS} -c "${CRT0_SRC}" -o "${CRT0_OBJ}" -DCRT0_MSVC
     ECHO_OUTPUT_VARIABLE
     ECHO_ERROR_VARIABLE
     COMMAND_ERROR_IS_FATAL ANY
