@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef _DEBUG
+#ifdef TRACING
 
 #include <stdint.h>
 #include <stdio.h>
@@ -709,4 +709,4 @@ void riscvm_trace(riscvm_ptr self, Instruction inst)
 
 #define riscvm_trace(...)
 
-#endif // _DEBUG
+#endif // TRACING

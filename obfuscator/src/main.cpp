@@ -954,22 +954,15 @@ static bool obfuscateRiscvmRun(Context& ctx)
     return true;
 }
 
+#ifdef _WIN32
+
 namespace vm
 {
-#ifdef _WIN32
-#pragma section(".vmcode", read, write)
-__declspec(align(4096)) uint8_t g_code[0x10000];
-#pragma section(".vmstack", read, write)
-__declspec(align(4096)) uint8_t g_stack[0x10000];
-#else
-uint8_t g_code[0x10000] __attribute__((aligned(0x1000)));
-uint8_t g_stack[0x10000] __attribute__((aligned(0x1000)));
-#endif // _WIN32
+#include "../../riscvm/riscvm-code.h"
 } // namespace vm
 
 typedef void (*riscvm_run_t)(vm::riscvm*);
 
-#ifdef _WIN32
 #include <Windows.h>
 #include "../../riscvm/isa-tests/data.h"
 

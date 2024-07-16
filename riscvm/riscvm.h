@@ -4,12 +4,9 @@
 #include <stdint.h>
 #include <wchar.h>
 
-extern uint8_t g_code[0x10000];
-extern uint8_t g_stack[0x10000];
+#ifdef TRACING
+#warning Tracing enabled
 
-#ifdef _DEBUG
-
-#define HAS_TRACE
 extern bool g_trace;
 
 #define ALWAYS_INLINE
@@ -72,7 +69,7 @@ extern bool g_trace;
 #define UNLIKELY(x) (x)
 #endif
 
-#endif // _DEBUG
+#endif // TRACING
 
 #define reg_read(idx) (int64_t) self->regs[idx]
 
@@ -90,15 +87,20 @@ struct riscvm
     int64_t  pc;
     uint64_t regs[32];
 
-#ifdef _DEBUG
+#ifdef TRACING
     FILE*   trace;
     int64_t rebase;
-#endif // _DEBUG
+#endif // TRACING
 
 #ifdef CODE_ENCRYPTION
     int64_t  base;
     uint32_t key;
 #endif // CODE_ENCRYPTION
+
+#ifdef CUSTOM_SYSCALLS
+    void* userdata;
+    bool (*handle_syscall)(riscvm* self, uint64_t code, uint64_t* result);
+#endif // CUSTOM_SYSCALLS
 };
 typedef riscvm* riscvm_ptr;
 
@@ -273,17 +275,15 @@ template <typename T> ALWAYS_INLINE void riscvm_write(uint64_t addr, T val)
     memcpy((void*)addr, &val, sizeof(val));
 }
 
-ALWAYS_INLINE void* riscvm_getptr(riscvm_ptr self, uint64_t addr)
+ALWAYS_INLINE static void* riscvm_getptr(riscvm_ptr self, uint64_t addr)
 {
     return (void*)addr;
 }
 
-ALWAYS_INLINE int32_t bit_signer(uint32_t field, uint32_t size)
+ALWAYS_INLINE static int32_t bit_signer(uint32_t field, uint32_t size)
 {
     return (field & (1U << (size - 1))) ? (int32_t)(field | (0xFFFFFFFFU << size)) : (int32_t)field;
 }
-
-void riscvm_loadfile(riscvm_ptr self, const char* filename);
 
 #ifdef _MSC_VER
 #define DLLEXPORT __declspec(dllexport)

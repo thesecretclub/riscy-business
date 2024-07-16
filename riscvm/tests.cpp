@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "riscvm.h"
+#include "riscvm-code.h"
 #include "isa-tests/data.h"
 
 int main(int argc, char** argv)
@@ -44,18 +45,26 @@ int main(int argc, char** argv)
         riscvm vm   = {};
         auto   self = &vm;
         reg_write(reg_sp, (uint64_t)&g_stack[sizeof(g_stack) - 0x10]);
-        self->pc = (int64_t)g_code + test.offset;
-#ifdef _DEBUG
+        self->pc             = (int64_t)g_code + test.offset;
+        self->handle_syscall = [](riscvm* self, uint64_t code, uint64_t* result)
+        {
+            if (code != 0x5d)
+            {
+                printf("Unexpected syscall %llu (0x%llX)\n", code, code);
+            }
+            return false;
+        };
+#ifdef TRACING
         g_trace             = true;
         char tracename[256] = "";
         sprintf(tracename, "%s.trace", test.name);
         self->trace  = fopen(tracename, "w");
         self->rebase = -self->pc + test.address;
-#endif // _DEBUG
+#endif // TRACING
         riscvm_run(self);
-#ifdef _DEBUG
+#ifdef TRACING
         fclose(self->trace);
-#endif // _DEBUG
+#endif // TRACING
         auto status = (int)reg_read(reg_a0);
         if (status != 0)
         {
@@ -67,6 +76,12 @@ int main(int argc, char** argv)
             printf("SUCCESS\n");
         }
     }
+    if (total == 0)
+    {
+        puts("No tests matched filter");
+        return EXIT_FAILURE;
+    }
+
     printf("\n%d/%d tests successful (%.2f%%)\n", successful, total, successful * 1.0f / total * 100);
     return successful == total ? EXIT_SUCCESS : EXIT_FAILURE;
 }

@@ -25,91 +25,6 @@
 
 bool g_trace;
 
-#ifdef _WIN32
-#pragma section(".vmcode", read, write)
-__declspec(align(4096)) uint8_t g_code[0x10000];
-#pragma section(".vmstack", read, write)
-__declspec(align(4096)) uint8_t g_stack[0x10000];
-#else
-uint8_t g_code[0x10000] __attribute__((aligned(0x1000)));
-uint8_t g_stack[0x10000] __attribute__((aligned(0x1000)));
-#endif // _WIN32
-
-void riscvm_loadfile(riscvm_ptr self, const char* filename)
-{
-    FILE* fp = fopen(filename, "rb");
-    if ((!(fp != NULL)))
-    {
-        log("failed to open file\n");
-    }
-    fseek(fp, 0, SEEK_END);
-    long size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-    if (size > sizeof(g_code))
-    {
-        log("loaded code too big!\n");
-        exit(EXIT_FAILURE);
-    }
-    fread(g_code, size, 1, fp);
-    fclose(fp);
-    reg_write(reg_sp, (uint64_t)&g_stack[sizeof(g_stack) - 0x10]);
-    self->pc = (int64_t)g_code;
-
-#pragma pack(1)
-    struct Features
-    {
-        uint32_t magic;
-        struct
-        {
-            bool encrypted : 1;
-            bool shuffled  : 1;
-        };
-        uint32_t key;
-    };
-    static_assert(sizeof(Features) == 9, "");
-
-    auto features = (Features*)(g_code + size - sizeof(Features));
-    if (features->magic != 'TAEF')
-    {
-        log("no features in the file (unencrypted payload?)\n");
-#if defined(CODE_ENCRYPTION) || defined(OPCODE_SHUFFLING)
-        exit(EXIT_FAILURE);
-#else
-        return;
-#endif // CODE_ENCRYPTION || OPCODE_SHUFFLING
-    }
-
-#ifdef OPCODE_SHUFFLING
-    if (!features->shuffled)
-    {
-        log("shuffling enabled on the host, disabled in the bytecode");
-        exit(EXIT_FAILURE);
-    }
-#else
-    if (features->shuffled)
-    {
-        log("shuffling disabled on the host, enabled in the bytecode");
-        exit(EXIT_FAILURE);
-    }
-#endif // OPCODE_SHUFFLING
-
-#ifdef CODE_ENCRYPTION
-    if (!features->encrypted)
-    {
-        log("encryption enabled on the host, disabled in the bytecode");
-        exit(EXIT_FAILURE);
-    }
-    self->base = self->pc;
-    self->key  = features->key;
-#else
-    if (features->encrypted)
-    {
-        log("encryption disabled on the host, enabled in the bytecode");
-        exit(EXIT_FAILURE);
-    }
-#endif // CODE_ENCRYPTION
-}
-
 #ifdef CODE_ENCRYPTION
 #warning Code encryption enabled
 
@@ -153,6 +68,9 @@ ALWAYS_INLINE static uint32_t riscvm_fetch(riscvm_ptr self)
 #endif // CODE_ENCRYPTION
 }
 
+#ifdef CUSTOM_SYSCALLS
+#warning Custom syscalls enabled
+#else
 ALWAYS_INLINE static bool riscvm_handle_syscall(riscvm_ptr self, uint64_t code, uint64_t& result)
 {
     switch (code)
@@ -292,6 +210,7 @@ ALWAYS_INLINE static bool riscvm_handle_syscall(riscvm_ptr self, uint64_t code, 
     }
     return true;
 }
+#endif // CUSTOM_SYSCALLS
 
 ALWAYS_INLINE static __int128 riscvm_shr_int128(__int128 a, __int128 b)
 {
@@ -356,7 +275,7 @@ static constexpr std::array<riscvm_handler_t, 32> riscvm_handlers = []
     return result;
 }();
 
-#ifdef _DEBUG
+#ifdef TRACING
 #define dispatch()                                       \
     Instruction next;                                    \
     next.bits = riscvm_fetch(self);                      \
@@ -376,7 +295,7 @@ static constexpr std::array<riscvm_handler_t, 32> riscvm_handlers = []
         panic("compressed instructions not supported!"); \
     }                                                    \
     __attribute__((musttail)) return riscvm_handlers[next.opcode](self, next)
-#endif // _DEBUG
+#endif // TRACING
 
 #else
 #define dispatch() return true
@@ -1001,18 +920,23 @@ ALWAYS_INLINE static bool handler_rv64_system(riscvm_ptr self, Instruction inst)
     {
     case 0b000000000000: // ecall
     {
-#ifdef _DEBUG
+#ifdef TRACING
         // Flush the trace in case the system call crashes
         if (g_trace)
         {
             fflush(self->trace);
         }
-#endif // _DEBUG
+#endif // TRACING
 
         uint64_t code   = reg_read(reg_a7);
         uint64_t result = 0;
+#ifdef CUSTOM_SYSCALLS
+        if (!self->handle_syscall(self, code, &result))
+            return false;
+#else
         if (!riscvm_handle_syscall(self, code, result))
             return false;
+#endif // CUSTOM_SYSCALLS
         reg_write(reg_a0, result);
         break;
     }
@@ -1138,12 +1062,12 @@ NEVER_INLINE void riscvm_run(riscvm_ptr self)
         Instruction inst;
         inst.bits = riscvm_fetch(self);
 
-#ifdef _DEBUG
+#ifdef TRACING
         if (g_trace)
         {
             riscvm_trace(self, inst);
         }
-#endif // _DEBUG
+#endif // TRACING
         if (!riscvm_execute(self, inst))
             break;
     }

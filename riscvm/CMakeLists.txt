@@ -30,6 +30,8 @@ option(RISCVM_CODE_ENCRYPTION "" ON)
 option(RISCVM_OPCODE_SHUFFLING "" ON)
 option(RISCVM_DEBUG_SYSCALLS "" ON)
 option(RISCVM_SILENT_PANIC "" OFF)
+option(RISCVM_TRACING "" OFF)
+option(RISCVM_CUSTOM_SYSCALLS "" OFF)
 
 project(riscvm)
 
@@ -79,6 +81,18 @@ if(RISCVM_SILENT_PANIC) # RISCVM_SILENT_PANIC
 	)
 endif()
 
+if(RISCVM_TRACING) # RISCVM_TRACING
+	target_compile_definitions(riscvm PRIVATE
+		TRACING
+	)
+endif()
+
+if(RISCVM_CUSTOM_SYSCALLS) # RISCVM_CUSTOM_SYSCALLS
+	target_compile_definitions(riscvm PRIVATE
+		CUSTOM_SYSCALLS
+	)
+endif()
+
 target_compile_features(riscvm PRIVATE
 	cxx_std_17
 )
@@ -94,6 +108,12 @@ if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VA
 	target_compile_options(riscvm PRIVATE
 		-fno-jump-tables
 		-mno-sse
+	)
+endif()
+
+if(APPLE) # apple
+	target_compile_options(riscvm PRIVATE
+		-Wno-deprecated-declarations
 	)
 endif()
 
@@ -121,13 +141,25 @@ add_executable(tests)
 target_sources(tests PRIVATE ${tests_SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${tests_SOURCES})
 
+if(RISCVM_TRACING) # RISCVM_TRACING
+	target_compile_definitions(tests PRIVATE
+		TRACING
+	)
+endif()
+
 target_compile_definitions(tests PRIVATE
-	DEBUG_SYSCALLS
+	CUSTOM_SYSCALLS
 )
 
 target_compile_features(tests PRIVATE
 	cxx_std_17
 )
+
+if(APPLE) # apple
+	target_compile_options(tests PRIVATE
+		-Wno-deprecated-declarations
+	)
+endif()
 
 if(MSVC) # msvc
 	target_link_options(tests PRIVATE
