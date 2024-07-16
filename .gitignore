@@ -11,3 +11,8 @@ build*/
 *.ll
 *.exe
 *.dll
+
+__pycache__/
+
+# macos
+.DS_Store

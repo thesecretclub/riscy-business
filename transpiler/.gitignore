@@ -6,6 +6,3 @@ CMakeLists.txt.user
 
 # clangd
 .cache/
-
-# macos
-.DS_Store
