@@ -27,6 +27,7 @@ clang-cl.compile-options = ["/clang:-fno-jump-tables", "/clang:-mno-sse"]
 clang.compile-options = ["-fno-jump-tables", "-mno-sse"]
 apple.compile-options = ["-Wno-deprecated-declarations"]
 msvc.link-options = ["/DYNAMICBASE:NO", "/INCREMENTAL:NO"]
+msvc.compile-definitions = ["_CRT_SECURE_NO_WARNINGS"]
 
 [target.tests]
 type = "executable"

@@ -93,6 +93,12 @@ if(RISCVM_CUSTOM_SYSCALLS) # RISCVM_CUSTOM_SYSCALLS
 	)
 endif()
 
+if(MSVC) # msvc
+	target_compile_definitions(riscvm PRIVATE
+		_CRT_SECURE_NO_WARNINGS
+	)
+endif()
+
 target_compile_features(riscvm PRIVATE
 	cxx_std_17
 )
