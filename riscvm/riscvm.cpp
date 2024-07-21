@@ -1053,6 +1053,10 @@ ALWAYS_INLINE static bool riscvm_execute(riscvm_ptr self, Instruction inst)
     }
 }
 
+// Disable stack cookie checks https://stackoverflow.com/a/54241761/1806760
+#ifdef _MSC_VER
+__declspec(safebuffers)
+#endif // _MSC_VER
 NEVER_INLINE void riscvm_run(riscvm_ptr self)
 {
     while (true)
