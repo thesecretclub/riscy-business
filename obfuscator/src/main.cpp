@@ -38,6 +38,7 @@ static void __debugbreak()
 
 namespace vm
 {
+#define CUSTOM_SYSCALLS
 #include "../../riscvm/riscvm.h"
 } // namespace vm
 
@@ -459,7 +460,7 @@ static bool disassembleRiscvmRun(
             auto dest = detail.getOperand(0);
             if (dest.getIf<Imm>() != nullptr)
             {
-                printf("unsupported call imm\n");
+                printf("unsupported call imm 0x%llX\n", curAddress);
                 return false;
             }
 
@@ -623,7 +624,7 @@ static bool analyzeRiscvmRun(Context& ctx, bool verbose = false)
                 auto dest = instr->getOperand(0);
                 if (dest.getIf<Label>() != nullptr)
                 {
-                    printf("unsupported call imm\n");
+                    printf("unsupported call imm 0x%llX\n", data->address);
                     return false;
                 }
             }
@@ -999,8 +1000,12 @@ static bool runIsaTests(riscvm_run_t riscvmRun, const std::vector<std::string>& 
 
         memset(g_code, 0, sizeof(g_code));
         memcpy(g_code, test.data, test.size);
-        riscvm vm   = {};
-        auto   self = &vm;
+        riscvm vm         = {};
+        vm.handle_syscall = [](vm::riscvm*, uint64_t, uint64_t*)
+        {
+            return false;
+        };
+        auto self = &vm;
         reg_write(reg_sp, (uint64_t)&g_stack[sizeof(g_stack) - 0x10]);
         self->pc = (int64_t)g_code + test.offset;
         riscvmRun(self);
@@ -1019,7 +1024,59 @@ static bool runIsaTests(riscvm_run_t riscvmRun, const std::vector<std::string>& 
     printf("\n%d/%d tests successful (%.2f%%)\n", successful, total, successful * 1.0f / total * 100);
     return successful == total;
 }
-#endif
+
+static bool riscvm_handle_syscall(vm::riscvm* self, uint64_t code, uint64_t* result)
+{
+    switch (code)
+    {
+    case 10000: // exit
+    {
+        return false;
+    }
+
+    case 20000: // host_call
+    {
+        uint64_t  func_addr = reg_read(vm::reg_a0);
+        uint64_t* args      = (uint64_t*)riscvm_getptr(self, reg_read(vm::reg_a1));
+
+        using syscall_fn = uint64_t (*)(
+            uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t
+        );
+
+        syscall_fn fn = (syscall_fn)func_addr;
+        *result =
+            fn(args[0],
+               args[1],
+               args[2],
+               args[3],
+               args[4],
+               args[5],
+               args[6],
+               args[7],
+               args[8],
+               args[9],
+               args[10],
+               args[11],
+               args[12]);
+        break;
+    }
+
+    case 20001: // get_peb
+    {
+        *result = __readgsqword(0x60);
+        break;
+    }
+
+    default:
+    {
+        panic("illegal system call %llu (0x%llX)\n", code, code);
+        return false;
+    }
+    }
+    return true;
+}
+
+#endif // _WIN32
 
 int main(int argc, char** argv)
 {
@@ -1054,7 +1111,7 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    if (!analyzeRiscvmRun(ctx))
+    if (!analyzeRiscvmRun(ctx, true))
     {
         puts("Failed to analyze the riscvm_run function.");
         return EXIT_FAILURE;
@@ -1115,10 +1172,12 @@ int main(int argc, char** argv)
         }
 
         using namespace vm;
-        riscvm vm       = {0};
-        vm.pc           = (int64_t)payload.data();
-        vm.regs[reg_sp] = (uint64_t)(uint64_t)&g_stack[sizeof(g_stack) - 0x10];
-        riscvmRun(&vm);
+        vm::riscvm self;
+        self.handle_syscall     = riscvm_handle_syscall;
+        self.pc                 = (int64_t)payload.data();
+        self.regs[vm::reg_zero] = 0;
+        self.regs[vm::reg_sp]   = (uint64_t)(uint64_t)&g_stack[sizeof(g_stack) - 0x10];
+        riscvmRun(&self);
     }
 #endif
 
