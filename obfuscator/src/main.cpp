@@ -7,6 +7,7 @@
 #include <set>
 #include <fstream>
 #include <stack>
+#include <functional>
 
 #include "linux-pe/linuxpe"
 #include "linux-pe/nt/directories/dir_exceptions.hpp"
@@ -238,6 +239,21 @@ static std::vector<x86::Gp> maskToRegs(uint64_t mask)
     return result;
 }
 
+#ifndef _DEBUG
+
+static uint32_t regMask(const Reg& reg)
+{
+    if (!reg.isValid() || reg == x86::rip || reg == x86::rflags)
+        return 0;
+
+    if (!reg.isGp())
+        return 0;
+
+    return 1u << reg.getIndex();
+}
+
+#else
+
 static uint32_t regMask(const Reg& reg)
 {
     if (!reg.isValid() || reg == x86::rip || reg == x86::rflags)
@@ -252,8 +268,7 @@ static uint32_t regMask(const Reg& reg)
         return 0;
     }
 
-    auto mask = 1u << reg.getIndex();
-#ifdef _DEBUG
+    auto mask     = 1u << reg.getIndex();
     auto maskText = formatRegsMask(mask);
     auto regText  = formatter::toString(reg);
     for (auto& ch : regText)
@@ -261,9 +276,11 @@ static uint32_t regMask(const Reg& reg)
     regText = "(" + regText + ")";
     if (maskText != regText)
         __debugbreak();
-#endif
+
     return mask;
 }
+
+#endif
 
 struct InstructionData
 {
@@ -298,95 +315,92 @@ struct BasicBlock
 
 struct CFG
 {
-    Program&                                 program;
-    std::map<Label::Id, BasicBlock>          blocks;
-    std::map<Label::Id, std::set<Label::Id>> predecessors;
-    std::map<Label::Id, std::set<Label::Id>> successors;
-    std::set<Label::Id>                      exits;
-    Label::Id                                entry;
-    bool                                     _verbose = false;
+    std::map<Label::Id, BasicBlock>             blocks;
+    std::map<Label::Id, std::set<Label::Id>>    predecessors;
+    std::map<Label::Id, std::set<Label::Id>>    successors;
+    std::set<Label::Id>                         exits;
+    Label::Id                                   entry;
+    std::map<Label::Id, Label::Id>              idom;
+    std::map<Label::Id, std::vector<Label::Id>> domTree;
 
-    explicit CFG(Program& program) : program(program)
+    bool createCFG(Program& program, Label entryLabel)
     {
-    }
-
-    bool createCFG()
-    {
-        std::stack<Label>   toVisit;
+        std::vector<Label>  toVisit;
         std::set<Label::Id> visited;
 
-        toVisit.push(program.getEntryPoint());
+        entry = entryLabel.getId();
+        toVisit.push_back(entryLabel);
 
         while (!toVisit.empty())
         {
-            auto label = toVisit.top();
-            toVisit.pop();
+            auto label = toVisit.back();
+            toVisit.pop_back();
 
             // Skip if already visited
             //
             if (!visited.insert(label.getId()).second)
                 continue;
 
-            auto&       block     = getBlock(label);
+            auto&       block     = getBlock(program, label);
             const auto& labelData = *program.getLabelData(label);
             auto        node      = labelData.node->getNext();
 
             bool finished = false;
             while (!finished)
             {
-                auto instr = node->getIf<Instruction>();
-                // If the node is a label, add it to the visit list and create an edge
-                //
-                if (!instr)
+                if (auto instr = node->getIf<Instruction>())
                 {
-                    if (auto labelNode = node->getIf<Label>())
+                    auto data = node->getUserData<InstructionData>();
+                    auto info = *instr->getDetail(program.getMode());
+
+                    // Handle control flow instructions and add edges to the CFG
+                    //
+                    switch (info.getCategory())
                     {
-                        toVisit.push(*labelNode);
-                        addEdge(block.label, *labelNode);
+                    case x86::Category::UncondBR:
+                    {
+                        auto target = instr->getOperand<Label>(0);
+                        toVisit.push_back(target);
+                        addEdge(block.label, target);
+                        finished = true;
+                        break;
                     }
-                    break;
-                }
+                    case x86::Category::CondBr:
+                    {
+                        auto tbranch = instr->getOperand<Label>(0);
+                        auto fbranch = node->getNext()->get<Label>();
+                        toVisit.push_back(tbranch);
+                        toVisit.push_back(fbranch);
+                        addEdge(block.label, tbranch);
+                        addEdge(block.label, fbranch);
+                        finished = true;
+                        break;
+                    }
+                    case x86::Category::Ret:
+                        finished = true;
+                        exits.insert(block.label.getId());
+                        break;
+                    default:
+                        break;
+                    }
 
-                auto data = node->getUserData<InstructionData>();
-                auto info = *instr->getDetail(program.getMode());
-
-                // Handle control flow instructions and add edges to the CFG
-                //
-                switch (info.getCategory())
+                    // Append liveness information to the block
+                    //
+                    block.regsUse |= (data->regsRead & ~block.regsDef);
+                    block.regsDef |= data->regsWritten;
+                    block.flagsUse |= (data->flagsTested & ~block.flagsDef);
+                    block.flagsDef |= data->flagsModified;
+                }
+                else if (auto labelNode = node->getIf<Label>())
                 {
-                case x86::Category::UncondBR:
-                {
-                    auto target = instr->getOperand<Label>(0);
-                    toVisit.push(target);
-                    addEdge(block.label, target);
-                    finished = true;
+                    toVisit.push_back(*labelNode);
+                    addEdge(block.label, *labelNode);
                     break;
                 }
-                case x86::Category::CondBr:
+                else
                 {
-                    auto tbranch = instr->getOperand<Label>(0);
-                    auto fbranch = node->getNext()->get<Label>();
-                    toVisit.push(tbranch);
-                    toVisit.push(fbranch);
-                    addEdge(block.label, tbranch);
-                    addEdge(block.label, fbranch);
-                    finished = true;
                     break;
                 }
-                case x86::Category::Ret:
-                    finished = true;
-                    exits.insert(block.label.getId());
-                    break;
-                default:
-                    break;
-                }
-
-                // Append liveness information to the block
-                //
-                block.regsUse |= (data->regsRead & ~block.regsDef);
-                block.regsDef |= data->regsWritten;
-                block.flagsUse |= (data->flagsTested & ~block.flagsDef);
-                block.flagsDef |= data->flagsModified;
 
                 node = node->getNext();
             }
@@ -408,22 +422,21 @@ struct CFG
         // https://en.wikipedia.org/wiki/Live-variable_analysis
 
         // TODO: confirm this statement
-        // water: "Dominator tree would not work for this, because it
-        // does not take into account the next iteration of the loop"
-        //
-        // mishap: "this is correct, the complete method is to itterate
-        // until live sets stabilize"
-
         std::deque<Label::Id> queue;
+        std::set<Label::Id>   inQueue;
 
         // Initialize the queue with exit blocks
         for (const auto& exit : exits)
+        {
             queue.push_back(exit);
+            inQueue.insert(exit);
+        }
 
         while (!queue.empty())
         {
             Label::Id labelId = queue.front();
             queue.pop_front();
+            inQueue.erase(labelId);
 
             BasicBlock& block       = getBlock(labelId);
             auto        regsLiveIn  = block.regsUse | (block.regsLiveOut & ~block.regsDef);
@@ -438,10 +451,21 @@ struct CFG
                 // Iterate over predecessors and propagate liveness
                 for (const auto& pred : getPredecessors(labelId))
                 {
-                    BasicBlock& predBlock = getBlock(pred);
-                    predBlock.regsLiveOut |= regsLiveIn;
-                    predBlock.flagsLiveOut |= flagsLiveIn;
-                    queue.push_back(pred);
+                    BasicBlock& predBlock       = getBlock(pred);
+                    auto        newRegsLiveOut  = predBlock.regsLiveOut | regsLiveIn;
+                    auto        newFlagsLiveOut = predBlock.flagsLiveOut | flagsLiveIn;
+
+                    if (newRegsLiveOut != predBlock.regsLiveOut || newFlagsLiveOut != predBlock.flagsLiveOut)
+                    {
+                        predBlock.regsLiveOut  = newRegsLiveOut;
+                        predBlock.flagsLiveOut = newFlagsLiveOut;
+
+                        if (inQueue.find(pred) == inQueue.end())
+                        {
+                            inQueue.insert(pred);
+                            queue.push_back(pred);
+                        }
+                    }
                 }
 
                 // Apply liveness to each instruction in the block in reverse order
@@ -458,14 +482,21 @@ struct CFG
                     regsLive |= data->regsRead;
                     flagsLive |= data->flagsTested;
 
-                    // Store liveness info in instruction data
-                    data->regsLive  = regsLive;
-                    data->flagsLive = flagsLive;
+                    if (regsLive != data->regsLive || flagsLive != data->flagsLive)
+                    {
+                        // Store liveness info in instruction data
+                        data->regsLive  = regsLive;
+                        data->flagsLive = flagsLive;
 
-                    // Clear registers and flags that are written but not read/tested
-                    // TODO: Can this always be applied or only if regs are written?
-                    regsLive &= ~(data->regsWritten & ~data->regsRead);
-                    flagsLive &= ~(data->flagsModified & ~data->flagsTested);
+                        // Clear registers and flags that are written but not read/tested
+                        // TODO: Can this always be applied or only if regs are written?
+                        regsLive &= ~(data->regsWritten & ~data->regsRead);
+                        flagsLive &= ~(data->flagsModified & ~data->flagsTested);
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
             }
         }
@@ -473,7 +504,7 @@ struct CFG
         return true;
     }
 
-    BasicBlock& getBlock(Label label)
+    BasicBlock& getBlock(Program& program, Label label)
     {
         auto it = blocks.find(label.getId());
         if (it != blocks.end())
@@ -522,7 +553,7 @@ struct CFG
         return {};
     }
 
-    void printResults()
+    void printResults(Program& program)
     {
         std::string script;
         for (const auto& [label, block] : blocks)
@@ -597,17 +628,18 @@ struct CFG
             }
         }
         dot += "}";
-
         puts(dot.c_str());
     }
 };
 
 struct Context
 {
-    Program& program;
-    CFG      cfg;
+    Program&                   program;
+    CFG                        cfg;
+    std::map<Label::Id, CFG>   functionCFGs;
+    std::map<Label::Id, Label> functions;
 
-    explicit Context(Program& program) : program(program), cfg(program)
+    explicit Context(Program& program) : program(program)
     {
     }
 
@@ -615,72 +647,91 @@ struct Context
     addInstructionData(Node* node, uint64_t address, MachineMode mode, const InstructionDetail& detail)
     {
         auto data = node->getUserData<InstructionData>();
-        if (data == nullptr)
+        if (data != nullptr)
+            return data;
+
+        instructionDataPool.emplace_back();
+        data          = &instructionDataPool.back();
+        data->address = address;
+        data->detail  = detail;
+
+        data->regsRead      = 0;
+        data->regsWritten   = 0;
+        data->flagsModified = 0;
+        data->flagsTested   = 0;
+
+        auto operandCount = detail.getOperandCount();
+        for (size_t i = 0; i < operandCount; i++)
         {
-            instructionDataPool.emplace_back();
-            data          = &instructionDataPool.back();
-            data->address = address;
-            data->detail  = detail;
+            const auto& operand = detail.getOperand(i);
+            auto        access  = detail.getOperandAccess(i);
 
-            // Populate the registers read and written by the instruction
-            for (size_t i = 0; i < detail.getOperandCount(); i++)
+            if (auto reg = operand.getIf<Reg>())
             {
-                const auto& operand = detail.getOperand(i);
-                if (auto reg = operand.getIf<Reg>())
+                auto rootReg = reg->getRoot(mode);
+
+                if ((access & Operand::Access::MaskRead) != Operand::Access::None)
+                    data->regsRead |= regMask(rootReg);
+
+                if ((access & Operand::Access::MaskWrite) != Operand::Access::None)
                 {
-                    auto access = detail.getOperandAccess(i);
-                    if ((uint8_t)(access & Operand::Access::MaskRead))
-                    {
-                        data->regsRead |= regMask(reg->getRoot(mode));
-                    }
-                    if ((uint8_t)(access & Operand::Access::MaskWrite))
-                    {
-                        // mov al, 66 does not kill rax
-                        if (reg->isGp32() || reg->isGp64())
-                        {
-                            data->regsWritten |= regMask(reg->getRoot(mode));
-                        }
-                    }
-                }
-                else if (auto mem = operand.getIf<Mem>())
-                {
-                    data->regsRead |= regMask(mem->getBase().getRoot(mode));
-                    data->regsRead |= regMask(mem->getIndex().getRoot(mode));
+                    // mov al, 66 does not kill rax
+                    if (rootReg.isGp32() || rootReg.isGp64())
+                        data->regsWritten |= regMask(rootReg);
                 }
             }
-
-            // Populate the flags modified and tested by the instruction
-            const auto& flags   = detail.getCPUFlags();
-            data->flagsModified = uint32_t(flags.set0 | flags.set1 | flags.modified | flags.undefined);
-            data->flagsTested   = uint32_t(flags.tested);
-
-            // Special handling for call and ret instructions to properly support the calling conventions
-            // https://learn.microsoft.com/en-us/cpp/build/x64-software-conventions?view=msvc-170#x64-register-usage
-            switch (detail.getCategory())
+            else if (auto mem = operand.getIf<Mem>())
             {
-            case x86::Category::Call:
-            {
-                // The call instruction clobbers all volatile registers
-                data->regsWritten = regMask(x86::rax) | regMask(x86::rcx) | regMask(x86::rdx)
-                                  | regMask(x86::r8) | regMask(x86::r9) | regMask(x86::r10) | regMask(x86::r11);
-                // The call instruction reads the first 4 arguments from rcx, rdx, r8, r9 (and rsp because mishap said so)
-                data->regsRead = regMask(x86::rcx) | regMask(x86::rdx) | regMask(x86::r8) | regMask(x86::r9)
-                               | regMask(x86::rsp);
-            }
-            break;
+                if (auto baseReg = mem->getBase(); baseReg.isValid())
+                    data->regsRead |= regMask(baseReg.getRoot(mode));
 
-            case x86::Category::Ret:
-            {
-                // The ret instruction 'reads' all nonvolatile registers and the return value
-                data->regsRead = regMask(x86::rsp) | regMask(x86::rbx) | regMask(x86::rbp) | regMask(x86::rsi)
-                               | regMask(x86::rdi) | regMask(x86::r12) | regMask(x86::r13) | regMask(x86::r14)
-                               | regMask(x86::r15) | regMask(x86::rax);
-            }
-            break;
-            }
+                if (auto indexReg = mem->getIndex(); indexReg.isValid())
+                    data->regsRead |= regMask(indexReg.getRoot(mode));
 
-            node->setUserData(data);
+                if (auto segmentReg = mem->getSegment(); segmentReg.isValid())
+                    data->regsRead |= regMask(segmentReg.getRoot(mode));
+            }
         }
+
+        const auto& flags = detail.getCPUFlags();
+        data->flagsModified |= uint32_t(flags.set0 | flags.set1 | flags.modified | flags.undefined);
+        data->flagsTested |= uint32_t(flags.tested);
+
+        switch (detail.getCategory())
+        {
+        case x86::Category::Call:
+        {
+            const uint32_t volatileRegs = regMask(x86::rax) | regMask(x86::rcx) | regMask(x86::rdx)
+                                        | regMask(x86::r8) | regMask(x86::r9) | regMask(x86::r10)
+                                        | regMask(x86::r11);
+           
+            const uint32_t argRegsMask = regMask(x86::rcx) | regMask(x86::rdx) | regMask(x86::r8)
+                                       | regMask(x86::r9);
+
+            // The call instruction clobbers all volatile registers
+            data->regsWritten = volatileRegs;
+            // The call instruction reads the first 4 arguments from rcx, rdx, r8, r9 (and rsp because mishap said so)
+            data->regsRead    = argRegsMask | regMask(x86::rsp);
+        }
+        break;
+
+        case x86::Category::Ret:
+        {
+            
+            const uint32_t nonVolatileRegsMask = regMask(x86::rbx) | regMask(x86::rbp) | regMask(x86::rsi)
+                                               | regMask(x86::rdi) | regMask(x86::r12) | regMask(x86::r13)
+                                               | regMask(x86::r14) | regMask(x86::r15);
+
+            // The ret instruction 'reads' all nonvolatile registers and the return value
+            data->regsRead = nonVolatileRegsMask | regMask(x86::rsp) | regMask(x86::rax);
+        }
+        break;
+
+        default:
+            break;
+        }
+
+        node->setUserData(data);
         return data;
     }
 
@@ -840,15 +891,15 @@ static bool disassembleRiscvmRun(
 
 static bool analyzeRiscvmRun(Context& ctx, bool verbose = false)
 {
-    CFG& cfg = ctx.cfg;
+    auto& program = ctx.program;
+    auto& cfg     = ctx.cfg;
 
     if (verbose)
     {
         puts("=== ANALYZE ===");
-        cfg._verbose = verbose;
     }
 
-    if (!cfg.createCFG())
+    if (!cfg.createCFG(program, program.getEntryPoint()))
     {
         puts("failed!");
         return false;
@@ -862,7 +913,7 @@ static bool analyzeRiscvmRun(Context& ctx, bool verbose = false)
 
     if (verbose)
     {
-        cfg.printResults();
+        cfg.printResults(program);
     }
 
     return true;
@@ -911,6 +962,8 @@ static bool obfuscateRiscvmRun(Context& ctx, bool verbose = false)
                     assembler.call(instr->getOperand<Label>(0));
                     assembler.pop(x86::rax);
 
+                    regsDeadMask &= ~regMask(x86::rax);
+
                     program.destroy(node); // remove the unconditional branch
 
                     if (verbose)
@@ -921,13 +974,12 @@ static bool obfuscateRiscvmRun(Context& ctx, bool verbose = false)
             }
             break;
             default:
-                {
-                    for (auto deadReg : regsDead)
-                    {
-                        assembler.mov(deadReg, Imm(rand()));
-                    }
-                }
                 break;
+            }
+
+            for (auto deadReg : regsDead)
+            {
+                assembler.mov(deadReg, Imm(rand()));
             }
         }
 
@@ -1086,7 +1138,8 @@ int main(int argc, char** argv)
 
     Program program(MachineMode::AMD64);
     Context ctx(program);
-    if (!disassembleRiscvmRun(ctx, riscvmRunAddress, riscvmRunCode))
+
+    if (!disassembleRiscvmRun(ctx, riscvmRunAddress, riscvmRunCode, true))
     {
         puts("Failed to disassemble riscvm_run function.");
         return EXIT_FAILURE;
