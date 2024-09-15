@@ -53,7 +53,8 @@ def main():
 
     code += "static Test tests[] = {\n"
     for name, address, offset in tests:
-        variable = f"{name.replace('-', '_')}_data"
+        name = f"{name.replace('-', '_')}"
+        variable = f"{name}_data"
         code += f"    {{ \"{name}\", {variable}, sizeof({variable}), {hex(address)}, {hex(offset)} }},\n"
     code += "\n};\n"
 

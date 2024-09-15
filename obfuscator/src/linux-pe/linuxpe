@@ -1,3 +1,0 @@
-#pragma once
-#include "coff/image.hpp"
-#include "nt/image.hpp"
