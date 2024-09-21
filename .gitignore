@@ -5,12 +5,14 @@ build*/
 
 *.bin
 *.elf
+*.so
 *.o
 *.map
 *.bc
 *.ll
 *.exe
 *.dll
+*.pdb
 
 __pycache__/
 
