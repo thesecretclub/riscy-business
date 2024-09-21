@@ -10,7 +10,7 @@ Context::Context(Program& program) : program_(program)
 {
 }
 
-void Context::addInstructionData(Node* node, uintptr_t address, const InstructionDetail& detail)
+void Context::addInstructionData(Node* node, uint64_t address, const InstructionDetail& detail)
 {
     auto data = node->getUserData<InstructionData>();
     if (data != nullptr)

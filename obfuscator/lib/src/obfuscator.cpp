@@ -33,7 +33,7 @@ class Obfuscator::Impl
     Analyzer       analyzer_;
     ObfuscatorCore obfuscatorCore_;
 
-    uintptr_t            functionAddress_;
+    uint64_t             functionAddress_;
     std::vector<uint8_t> functionData_;
 };
 
@@ -121,7 +121,7 @@ bool Obfuscator::Impl::obfuscateFunction(bool verbose)
 bool Obfuscator::Impl::serialize(std::vector<uint8_t>& outputCode, bool verbose)
 {
     Serializer serializer;
-    uintptr_t  baseAddress = 0;
+    uint64_t   baseAddress = 0;
 
     if (verbose)
     {

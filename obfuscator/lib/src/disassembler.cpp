@@ -14,7 +14,7 @@ Disassembler::Disassembler(Program& program, Context& context) : program_(progra
 }
 
 bool Disassembler::disassemble(
-    const std::string& functionName, uintptr_t address, const std::vector<uint8_t>& code, bool verbose
+    const std::string& functionName, uint64_t address, const std::vector<uint8_t>& code, bool verbose
 )
 {
     auto mode = program_.getMode();
@@ -27,8 +27,8 @@ bool Disassembler::disassemble(
     ctx_.addInstructionData(assembler.getCursor(), address, {});
     program_.setEntryPoint(entryLabel);
 
-    std::map<uintptr_t, Node*> nodes;
-    std::map<uintptr_t, Label> labels;
+    std::map<uint64_t, Node*> nodes;
+    std::map<uint64_t, Label> labels;
 
     size_t offset = 0;
     while (offset < code.size())
@@ -65,7 +65,7 @@ bool Disassembler::disassemble(
             return true;
         };
 
-        auto createLabel = [&](uintptr_t targetAddress)
+        auto createLabel = [&](uint64_t targetAddress)
         {
             auto it = labels.find(targetAddress);
             if (it == labels.end())
@@ -82,7 +82,7 @@ bool Disassembler::disassemble(
         {
         case Category::UncondBR:
         {
-            auto dest = detail.getOperand<Imm>(0).value<uintptr_t>();
+            auto dest = detail.getOperand<Imm>(0).value<uint64_t>();
             assembler.emit(detail.getMnemonic(), createLabel(dest));
             ctx_.addInstructionData(assembler.getCursor(), curAddress, detail);
 
@@ -95,7 +95,7 @@ bool Disassembler::disassemble(
 
         case Category::CondBr:
         {
-            auto brtrue  = detail.getOperand<Imm>(0).value<uintptr_t>();
+            auto brtrue  = detail.getOperand<Imm>(0).value<uint64_t>();
             auto brfalse = offset + address;
             createLabel(brfalse);
             assembler.emit(detail.getMnemonic(), createLabel(brtrue));
@@ -157,4 +157,3 @@ bool Disassembler::disassemble(
 }
 
 } // namespace ObfuscatorLib
-

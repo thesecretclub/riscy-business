@@ -16,7 +16,7 @@ class Disassembler
     Disassembler(Program& program, Context& context);
 
     bool disassemble(
-        const std::string& functionName, uintptr_t address, const std::vector<uint8_t>& code, bool verbose = false
+        const std::string& functionName, uint64_t address, const std::vector<uint8_t>& code, bool verbose = false
     );
 
   private:
