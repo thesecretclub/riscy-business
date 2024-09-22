@@ -4,6 +4,7 @@
 #include "util.hpp"
 #include <deque>
 #include <string>
+#include <queue>
 #include <zasm/formatter/formatter.hpp>
 
 using namespace zasm;
@@ -113,21 +114,18 @@ void CFG::computeLiveness()
     // Perform liveness analysis on the control flow graph
     // https://en.wikipedia.org/wiki/Live-variable_analysis
 
-    std::deque<Label::Id> queue;
-    std::set<Label::Id>   inQueue;
+    std::queue<Label::Id> queue;
 
     // Initialize the queue with exit blocks
     for (const auto& exit : exits_)
     {
-        queue.push_back(exit);
-        inQueue.insert(exit);
+        queue.push(exit);
     }
 
     while (!queue.empty())
     {
         Label::Id labelId = queue.front();
-        queue.pop_front();
-        inQueue.erase(labelId);
+        queue.pop();
 
         BasicBlock& block       = getBlock(labelId);
         auto        regsLiveIn  = block.regsUse | (block.regsLiveOut & ~block.regsDef);
@@ -150,44 +148,36 @@ void CFG::computeLiveness()
                 {
                     predBlock.regsLiveOut  = newRegsLiveOut;
                     predBlock.flagsLiveOut = newFlagsLiveOut;
-
-                    if (inQueue.find(pred) == inQueue.end())
-                    {
-                        inQueue.insert(pred);
-                        queue.push_back(pred);
-                    }
+                    queue.push(pred);
                 }
             }
+        }
+    }
 
-            // Apply liveness to each instruction in the block in reverse order
-            auto node      = block.end;
-            auto regsLive  = block.regsLiveOut;
-            auto flagsLive = block.flagsLiveOut;
+    // Compute liveness backwards for each block individually
+    for (auto& [labelId, block] : blocks_)
+    {
+        // Apply liveness to each instruction in the block in reverse order
+        auto regsLive  = block.regsLiveOut;
+        auto flagsLive = block.flagsLiveOut;
 
-            while (node != block.begin)
+        for (auto node = block.end->getPrev(); node != block.begin->getPrev(); node = node->getPrev())
+        {
+            auto data = node->getUserData<InstructionData>();
+
+            // If the register/flag is read, it must be live
+            regsLive |= data->regsRead;
+            flagsLive |= data->flagsTested;
+
+            if (regsLive != data->regsLive || flagsLive != data->flagsLive)
             {
-                node      = node->getPrev();
-                auto data = node->getUserData<InstructionData>();
+                // Store liveness info in instruction data
+                data->regsLive  = regsLive;
+                data->flagsLive = flagsLive;
 
-                // If the register/flag is read, it must be live
-                regsLive |= data->regsRead;
-                flagsLive |= data->flagsTested;
-
-                if (regsLive != data->regsLive || flagsLive != data->flagsLive)
-                {
-                    // Store liveness info in instruction data
-                    data->regsLive  = regsLive;
-                    data->flagsLive = flagsLive;
-
-                    // Clear registers and flags that are written but not read/tested
-                    // TODO: Can this always be applied or only if regs are written?
-                    regsLive &= ~(data->regsWritten & ~data->regsRead);
-                    flagsLive &= ~(data->flagsModified & ~data->flagsTested);
-                }
-                else
-                {
-                    break;
-                }
+                // Clear registers and flags that are written but not read/tested
+                regsLive &= ~(data->regsWritten & ~data->regsRead);
+                flagsLive &= ~(data->flagsModified & ~data->flagsTested);
             }
         }
     }
