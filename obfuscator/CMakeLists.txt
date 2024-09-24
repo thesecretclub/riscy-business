@@ -30,6 +30,10 @@ if(NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
 	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
+# Options
+option(BUILD_TESTS "" ON)
+option(ENABLE_LOGGING "" ON)
+
 project(obfuscator)
 
 include(FetchContent)
@@ -47,6 +51,83 @@ FetchContent_Declare(zasm
 )
 FetchContent_MakeAvailable(zasm)
 
+if(BUILD_TESTS) # build-tests
+	message(STATUS "Fetching GTest (v1.15.2)...")
+	FetchContent_Declare(GTest
+		GIT_REPOSITORY
+			"https://github.com/google/googletest"
+		GIT_TAG
+			v1.15.2
+	)
+	FetchContent_MakeAvailable(GTest)
+
+endif()
+# Target: riscvm
+add_library(riscvm INTERFACE)
+
+target_include_directories(riscvm INTERFACE
+	"../riscvm"
+)
+
+# Target: linux_pe
+add_library(linux_pe INTERFACE)
+
+target_compile_features(linux_pe INTERFACE
+	cxx_std_20
+)
+
+target_include_directories(linux_pe INTERFACE
+	"thirdparty/linux-pe"
+)
+
+# Target: obfuscator_lib
+set(obfuscator_lib_SOURCES
+	cmake.toml
+	"lib/include/analyzer.hpp"
+	"lib/include/cfg.hpp"
+	"lib/include/context.hpp"
+	"lib/include/disassembler.hpp"
+	"lib/include/instruction_data.hpp"
+	"lib/include/logger.hpp"
+	"lib/include/obfuscator.hpp"
+	"lib/include/obfuscator_core.hpp"
+	"lib/include/pe_loader.hpp"
+	"lib/include/util.hpp"
+	"lib/src/analyzer.cpp"
+	"lib/src/cfg.cpp"
+	"lib/src/context.cpp"
+	"lib/src/disassembler.cpp"
+	"lib/src/logger.cpp"
+	"lib/src/obfuscator.cpp"
+	"lib/src/obfuscator_core.cpp"
+	"lib/src/pe_loader.cpp"
+	"lib/src/util.cpp"
+)
+
+add_library(obfuscator_lib STATIC)
+
+target_sources(obfuscator_lib PRIVATE ${obfuscator_lib_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${obfuscator_lib_SOURCES})
+
+if(ENABLE_LOGGING) # ENABLE_LOGGING
+	target_compile_definitions(obfuscator_lib PUBLIC
+		ENABLE_LOGGING
+	)
+endif()
+
+target_compile_features(obfuscator_lib PUBLIC
+	cxx_std_20
+)
+
+target_include_directories(obfuscator_lib PUBLIC
+	"lib/include"
+)
+
+target_link_libraries(obfuscator_lib PUBLIC
+	zasm::zasm
+	linux_pe
+)
+
 # Target: obfuscator
 set(obfuscator_SOURCES
 	cmake.toml
@@ -63,10 +144,40 @@ target_compile_features(obfuscator PRIVATE
 )
 
 target_link_libraries(obfuscator PRIVATE
-	zasm::zasm
+	obfuscator_lib
 )
 
 get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
 if(NOT CMKR_VS_STARTUP_PROJECT)
 	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT obfuscator)
+endif()
+
+# Target: obfuscator_tests
+if(BUILD_TESTS) # build-tests
+	set(obfuscator_tests_SOURCES
+		cmake.toml
+		"tests/isa_tests_no_obfuscation.cpp"
+		"tests/isa_tests_obfuscation.cpp"
+		"tests/syscall_handler.hpp"
+		"tests/test_config.cpp"
+		"tests/test_config.hpp"
+		"tests/test_main.cpp"
+	)
+
+	add_executable(obfuscator_tests)
+
+	target_sources(obfuscator_tests PRIVATE ${obfuscator_tests_SOURCES})
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${obfuscator_tests_SOURCES})
+
+	target_link_libraries(obfuscator_tests PRIVATE
+		obfuscator_lib
+		GTest::gtest_main
+		riscvm
+	)
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT obfuscator_tests)
+	endif()
+
 endif()
