@@ -142,16 +142,29 @@ static bool riscvm_handle_syscall(vm::riscvm* self, uint64_t code, uint64_t* res
 
 #endif // _WIN32
 
+#include <args.hpp>
+
+struct Arguments : ArgumentParser
+{
+    std::string input;
+    std::string output;
+    std::string payload;
+
+    Arguments(int argc, char** argv) : ArgumentParser("Obfuscates the riscvm_run function")
+    {
+        addPositional("input", input, "Input PE file to obfuscate", true);
+        addString("-output", output, "Obfuscated function output");
+        addString("-payload", payload, "Payload to execute (Windows only)");
+        parseOrExit(argc, argv);
+    }
+};
+
 int main(int argc, char** argv)
 {
-    if (argc < 2)
-    {
-        puts("Usage: obfuscator riscvm.exe [payload.bin]");
-        return EXIT_FAILURE;
-    }
+    Arguments args(argc, argv);
 
     std::vector<uint8_t> pe;
-    if (!loadFile(argv[1], pe))
+    if (!loadFile(args.input, pe))
     {
         puts("Failed to load the executable.");
         return EXIT_FAILURE;
@@ -205,8 +218,9 @@ int main(int argc, char** argv)
     auto size = serializer.getCodeSize();
 
     // Save the obfuscated code to disk
+    if (!args.output.empty())
     {
-        std::ofstream ofs("riscvm_run_obfuscated.bin", std::ios::binary);
+        std::ofstream ofs(args.output, std::ios::binary);
         ofs.write((char*)ptr, size);
     }
 
@@ -226,10 +240,10 @@ int main(int argc, char** argv)
         __debugbreak();
 
     // Run the payload if specified on the command line
-    if (argc > 2)
+    if (!args.payload.empty())
     {
         std::vector<uint8_t> payload;
-        if (!loadFile(argv[2], payload))
+        if (!loadFile(args.payload, payload))
         {
             puts("Failed to load the payload.");
             return EXIT_FAILURE;

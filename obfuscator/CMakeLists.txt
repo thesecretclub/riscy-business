@@ -64,6 +64,15 @@ if(BUILD_TESTS) # build-tests
 	FetchContent_MakeAvailable(googletest)
 
 endif()
+message(STATUS "Fetching args (v1.0)...")
+FetchContent_Declare(args
+	GIT_REPOSITORY
+		"https://github.com/LLVMParty/args"
+	GIT_TAG
+		v1.0
+)
+FetchContent_MakeAvailable(args)
+
 # Target: linux-pe
 add_library(linux-pe INTERFACE)
 
@@ -114,6 +123,7 @@ if(CMKR_ROOT_PROJECT) # root
 
 	target_link_libraries(obfuscate PRIVATE
 		riscvm::obfuscator
+		args::args
 	)
 
 	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)

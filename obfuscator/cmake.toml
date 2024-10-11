@@ -17,6 +17,10 @@ git = "https://github.com/google/googletest"
 tag = "v1.15.2"
 condition = "build-tests"
 
+[fetch-content.args]
+git = "https://github.com/LLVMParty/args"
+tag = "v1.0"
+
 [target.linux-pe]
 type = "interface"
 include-directories = ["src/linux-pe"]
@@ -34,7 +38,7 @@ link-libraries = ["zasm::zasm", "linux-pe"]
 condition = "root"
 type = "executable"
 sources = ["src/obfuscate.cpp"]
-link-libraries = ["riscvm::obfuscator"]
+link-libraries = ["riscvm::obfuscator", "args::args"]
 
 [target.tests]
 type = "executable"
