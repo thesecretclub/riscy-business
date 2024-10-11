@@ -30,6 +30,12 @@ if(NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
 	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
+# Options
+option(BUILD_TESTS "" ${CMKR_ROOT_PROJECT})
+
+# Variables
+set(INSTALL_GTEST OFF)
+
 project(obfuscator)
 
 include(FetchContent)
@@ -47,26 +53,95 @@ FetchContent_Declare(zasm
 )
 FetchContent_MakeAvailable(zasm)
 
+if(BUILD_TESTS) # build-tests
+	message(STATUS "Fetching googletest (v1.15.2)...")
+	FetchContent_Declare(googletest
+		GIT_REPOSITORY
+			"https://github.com/google/googletest"
+		GIT_TAG
+			v1.15.2
+	)
+	FetchContent_MakeAvailable(googletest)
+
+endif()
+# Target: linux-pe
+add_library(linux-pe INTERFACE)
+
+target_include_directories(linux-pe INTERFACE
+	"src/linux-pe"
+)
+
 # Target: obfuscator
 set(obfuscator_SOURCES
 	cmake.toml
-	"src/main.cpp"
+	"src/obfuscator/analyze.cpp"
+	"src/obfuscator/context.cpp"
+	"src/obfuscator/disassemble.cpp"
+	"src/obfuscator/obfuscate.cpp"
+	"src/obfuscator/utility.cpp"
 )
 
-add_executable(obfuscator)
+add_library(obfuscator STATIC)
 
 target_sources(obfuscator PRIVATE ${obfuscator_SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${obfuscator_SOURCES})
 
-target_compile_features(obfuscator PRIVATE
+add_library(riscvm::obfuscator ALIAS obfuscator)
+target_compile_features(obfuscator PUBLIC
 	cxx_std_20
 )
 
-target_link_libraries(obfuscator PRIVATE
-	zasm::zasm
+target_include_directories(obfuscator PUBLIC
+	include
 )
 
-get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT obfuscator)
+target_link_libraries(obfuscator PUBLIC
+	zasm::zasm
+	linux-pe
+)
+
+# Target: obfuscate
+if(CMKR_ROOT_PROJECT) # root
+	set(obfuscate_SOURCES
+		cmake.toml
+		"src/obfuscate.cpp"
+	)
+
+	add_executable(obfuscate)
+
+	target_sources(obfuscate PRIVATE ${obfuscate_SOURCES})
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${obfuscate_SOURCES})
+
+	target_link_libraries(obfuscate PRIVATE
+		riscvm::obfuscator
+	)
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT obfuscate)
+	endif()
+
+endif()
+# Target: tests
+if(BUILD_TESTS) # build-tests
+	set(tests_SOURCES
+		cmake.toml
+		"src/tests/test-context.cpp"
+	)
+
+	add_executable(tests)
+
+	target_sources(tests PRIVATE ${tests_SOURCES})
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${tests_SOURCES})
+
+	target_link_libraries(tests PRIVATE
+		riscvm::obfuscator
+		gtest_main
+	)
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT tests)
+	endif()
+
 endif()

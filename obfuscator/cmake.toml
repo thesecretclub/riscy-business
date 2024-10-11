@@ -2,12 +2,42 @@
 name = "obfuscator"
 msvc-runtime = "static"
 
+[options]
+BUILD_TESTS = "root"
+
+[variables]
+INSTALL_GTEST = false
+
 [fetch-content.zasm]
 git = "https://github.com/zyantific/zasm"
 tag = "a18fa34251b161cc18e4c0fc385dee7cea104cfd"
 
+[fetch-content.googletest]
+git = "https://github.com/google/googletest"
+tag = "v1.15.2"
+condition = "build-tests"
+
+[target.linux-pe]
+type = "interface"
+include-directories = ["src/linux-pe"]
+
 [target.obfuscator]
-type = "executable"
-sources = ["src/main.cpp"]
+type = "static"
+alias = "riscvm::obfuscator"
+sources = ["src/obfuscator/*.cpp"]
+headers = ["src/obfuscator/*.hpp"]
+include-directories = ["include"]
 compile-features = ["cxx_std_20"]
-link-libraries = ["zasm::zasm"]
+link-libraries = ["zasm::zasm", "linux-pe"]
+
+[target.obfuscate]
+condition = "root"
+type = "executable"
+sources = ["src/obfuscate.cpp"]
+link-libraries = ["riscvm::obfuscator"]
+
+[target.tests]
+type = "executable"
+condition = "build-tests"
+sources = ["src/tests/*.cpp"]
+link-libraries = ["riscvm::obfuscator", "gtest_main"]
