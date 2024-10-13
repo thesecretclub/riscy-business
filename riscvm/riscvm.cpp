@@ -13,7 +13,7 @@
 #elif defined(__GNUC__)
 #define __debugbreak() __builtin_trap()
 #else
-#warning Unsupported platform/compiler
+#pragma message("Unsupported platform/compiler")
 #include <signal.h>
 #define __debugbreak() raise(SIGTRAP)
 #endif // _MSC_VER
@@ -24,7 +24,7 @@
 bool g_trace;
 
 #ifdef CODE_ENCRYPTION
-#warning Code encryption enabled
+#pragma message("Code encryption enabled")
 
 ALWAYS_INLINE static uint32_t tetra_twist(uint32_t input)
 {
@@ -67,7 +67,7 @@ ALWAYS_INLINE static uint32_t riscvm_fetch(riscvm_ptr self)
 }
 
 #ifdef CUSTOM_SYSCALLS
-#warning Custom syscalls enabled
+#pragma message("Custom syscalls enabled")
 #else
 ALWAYS_INLINE static bool riscvm_handle_syscall(riscvm_ptr self, uint64_t code, uint64_t& result)
 {
@@ -195,7 +195,7 @@ ALWAYS_INLINE static bool riscvm_handle_syscall(riscvm_ptr self, uint64_t code, 
 #ifdef _WIN32
         result = __readgsqword(0x60);
 #else
-#warning get_peb unsupported on this platform
+#pragma message("get_peb unsupported on this platform")
 #endif // _WIN32
         break;
     }
@@ -227,7 +227,7 @@ ALWAYS_INLINE static __int128 riscvm_shr_int128(__int128 a, __int128 b)
 }
 
 #ifdef DIRECT_DISPATCH
-#warning Direct dispatch enabled
+#pragma message("Direct dispatch enabled")
 #define HANDLER(op)   handler_##op
 #define FWHANDLER(op) static bool HANDLER(op)(riscvm_ptr self, Instruction inst)
 FWHANDLER(rv64_load);

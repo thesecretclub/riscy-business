@@ -40,6 +40,7 @@ set(riscvm_SOURCES
 	cmake.toml
 	main.cpp
 	opcodes.h
+	riscvm-code.h
 	riscvm.cpp
 	riscvm.h
 	shuffled_opcodes.h

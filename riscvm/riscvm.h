@@ -5,7 +5,7 @@
 #include <wchar.h>
 
 #ifdef TRACING
-#warning Tracing enabled
+#pragma message("Tracing enabled")
 
 extern bool g_trace;
 
@@ -257,7 +257,7 @@ enum RegIndex
 };
 
 #ifdef OPCODE_SHUFFLING
-#warning Opcode shuffling enabled
+#pragma message("Opcode shuffling enabled")
 #include "shuffled_opcodes.h"
 #else
 #include "opcodes.h"
