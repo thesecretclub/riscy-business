@@ -1,4 +1,5 @@
 #include <obfuscator/obfuscate.hpp>
+#include <fmt/format.h>
 
 namespace obfuscator
 {
@@ -20,7 +21,7 @@ bool obfuscate(Context& ctx)
     // - Add opaque predicates (into middle of instructions)
     // - Sprinkle a little unicorn detection (maybe in-payload only)
 
-    puts("=== OBFUSCATE === ");
+    fmt::println("=== OBFUSCATE === ");
     srand(1337);
     auto entryNode = program.getLabelData(program.getEntryPoint()).value().node;
     for (auto node = entryNode; node != nullptr;)

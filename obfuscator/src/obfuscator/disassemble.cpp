@@ -2,9 +2,9 @@
 #include <obfuscator/msvc-secure.hpp>
 
 #include <zasm/formatter/formatter.hpp>
+#include <fmt/format.h>
 
 #include <map>
-#include <iostream>
 
 namespace obfuscator
 {
@@ -17,7 +17,7 @@ bool disassemble(Context& ctx, const uint64_t functionStart, const std::vector<u
     auto     mode    = program.getMode();
 
     if (verbose)
-        puts("=== DISASSEMBLE ===");
+        fmt::println("=== DISASSEMBLE ===");
     zasm::Decoder  decoder(mode);
     x86::Assembler assembler(program);
 
@@ -36,8 +36,7 @@ bool disassemble(Context& ctx, const uint64_t functionStart, const std::vector<u
         auto decoderRes = decoder.decode(code.data() + offset, code.size() - offset, curAddress);
         if (!decoderRes)
         {
-            std::cout << "Failed to decode at " << std::hex << curAddress << ", "
-                      << decoderRes.error().getErrorName() << "\n";
+            fmt::println("Failed to decode at {:#x}, {}", curAddress, decoderRes.error().getErrorName());
             return false;
         }
 
@@ -50,14 +49,13 @@ bool disassemble(Context& ctx, const uint64_t functionStart, const std::vector<u
 
         auto str = formatter::toString(&instr, formatter::Options::HexImmediates);
         if (verbose)
-            printf("0x%llX|%s\n", curAddress, str.c_str());
+            fmt::println("{:#x}|{}", curAddress, str);
 
         auto emit = [&]
         {
             if (auto res = assembler.emit(instr); res != zasm::ErrorCode::None)
             {
-                std::cout << "Failed to emit instruction " << std::hex << curAddress << ", "
-                          << res.getErrorName() << "\n";
+                fmt::println("Failed to emit instruction {:#x}, {}", curAddress, res.getErrorName());
                 return false;
             }
             ctx.addInstructionData(assembler.getCursor(), curAddress, mode, detail);
@@ -83,7 +81,7 @@ bool disassemble(Context& ctx, const uint64_t functionStart, const std::vector<u
         {
             auto dest = detail.getOperand<Imm>(0).value<uint64_t>();
             if (verbose)
-                printf("UncondBR: 0x%llX\n", dest);
+                fmt::println("UncondBR: {:#x}", dest);
             assembler.emit(detail.getMnemonic(), createLabel(dest));
             ctx.addInstructionData(assembler.getCursor(), curAddress, mode, detail);
         }
@@ -95,7 +93,7 @@ bool disassemble(Context& ctx, const uint64_t functionStart, const std::vector<u
             auto brfalse = offset + functionStart;
             createLabel(brfalse);
             if (verbose)
-                printf("CondBr: 0x%llX, 0x%llX\n", brtrue, brfalse);
+                fmt::println("CondBr: {:#x}, {:#x}", brtrue, brfalse);
             assembler.emit(detail.getMnemonic(), createLabel(brtrue));
             ctx.addInstructionData(assembler.getCursor(), curAddress, mode, detail);
         }
@@ -106,7 +104,7 @@ bool disassemble(Context& ctx, const uint64_t functionStart, const std::vector<u
             auto dest = detail.getOperand(0);
             if (dest.getIf<Imm>() != nullptr)
             {
-                printf("unsupported call imm 0x%llX\n", curAddress);
+                fmt::println("unsupported call imm {:#x}", curAddress);
                 return false;
             }
 
@@ -151,9 +149,7 @@ bool disassemble(Context& ctx, const uint64_t functionStart, const std::vector<u
 
     if (verbose)
     {
-        puts("");
-        std::string text = formatter::toString(program);
-        puts(text.c_str());
+        fmt::println("\n{}", formatter::toString(program));
     }
 
     return true;

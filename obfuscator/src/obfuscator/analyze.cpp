@@ -2,6 +2,7 @@
 #include <obfuscator/msvc-secure.hpp>
 
 #include <zasm/formatter/formatter.hpp>
+#include <fmt/format.h>
 
 #include <set>
 #include <map>
@@ -17,7 +18,7 @@ bool analyze(Context& ctx, bool verbose)
     Program& program = ctx.program;
     auto     mode    = program.getMode();
     if (verbose)
-        puts("=== ANALYZE ===");
+        fmt::println("=== ANALYZE ===");
     std::vector<Label> queue;
     queue.push_back(program.getEntryPoint());
     std::set<Label::Id> visisted;
@@ -64,11 +65,11 @@ bool analyze(Context& ctx, bool verbose)
         bb.begin   = labelData.node->getNext();
         if (bb.begin == nullptr)
         {
-            puts("empty block!");
+            fmt::println("empty block!");
             __debugbreak();
         }
         if (verbose)
-            printf("<==> Disassembling block: %s (0x%llX)\n", labelData.name, blockAddress);
+            fmt::println("<==> Disassembling block: {} ({:#x})", labelData.name, blockAddress);
 
         auto node     = labelData.node->getNext();
         bool finished = false;
@@ -81,14 +82,14 @@ bool analyze(Context& ctx, bool verbose)
                 queue.push_back(*label);
                 bb.successors.push_back(*label);
                 if (verbose)
-                    puts("not instr!");
+                    fmt::println("not instr!");
                 break;
             }
 
             auto data = node->getUserData<InstructionData>();
             auto str  = formatter::toString(program, instr, formatter::Options::HexImmediates);
             if (verbose)
-                printf("0x%llX|%s\n", data->address, str.c_str());
+                fmt::println("{:#x}|{}", data->address, str);
 
             auto info = *instr->getDetail(mode);
             switch (info.getCategory())
@@ -97,7 +98,7 @@ bool analyze(Context& ctx, bool verbose)
             {
                 auto dest = instr->getOperand<Label>(0);
                 if (verbose)
-                    printf("UncondBR: %d\n", dest.getId());
+                    fmt::println("UncondBR: {}", dest.getId());
                 queue.push_back(dest);
                 bb.successors.push_back(dest);
                 finished = true;
@@ -109,7 +110,7 @@ bool analyze(Context& ctx, bool verbose)
                 auto brtrue  = instr->getOperand<Label>(0);
                 auto brfalse = node->getNext()->get<Label>();
                 if (verbose)
-                    printf("CondBr: %d, %d\n", brtrue.getId(), brfalse.getId());
+                    fmt::println("CondBr: {}, {}", brtrue.getId(), brfalse.getId());
                 queue.push_back(brfalse);
                 queue.push_back(brtrue);
                 bb.successors.push_back(brtrue);
@@ -123,7 +124,7 @@ bool analyze(Context& ctx, bool verbose)
                 auto dest = instr->getOperand(0);
                 if (dest.getIf<Label>() != nullptr)
                 {
-                    printf("unsupported call imm 0x%llX\n", data->address);
+                    fmt::println("unsupported call imm {:#x}", data->address);
                     return false;
                 }
             }
@@ -148,7 +149,7 @@ bool analyze(Context& ctx, bool verbose)
         bb.end = node;
         if (bb.end == nullptr)
         {
-            puts("empty block!");
+            fmt::println("empty block!");
             __debugbreak();
         }
 
@@ -185,7 +186,7 @@ bool analyze(Context& ctx, bool verbose)
         if (verbose)
         {
             auto str = formatter::toString(program, block.begin, block.end, formatter::Options::HexImmediates);
-            printf("Analyzing block 0x%llX\n==========\n%s\n==========\n", address, str.c_str());
+            fmt::println("Analyzing block {:#x}\n==========\n{}\n==========", address, str);
         }
 
         for (auto node = block.begin; node != block.end; node = node->getNext())
@@ -196,11 +197,11 @@ bool analyze(Context& ctx, bool verbose)
             if (verbose)
             {
                 auto instrText = formatter::toString(program, node, formatter::Options::HexImmediates);
-                printf("0x%llX|%s\n", data->address, instrText.c_str());
-                printf("\tregs read: %s\n", formatRegsMask(data->regsRead).c_str());
-                printf("\tregs written: %s\n", formatRegsMask(data->regsWritten).c_str());
-                printf("\tflags tested: %s\n", formatFlagsMask(data->flagsTested).c_str());
-                printf("\tflags modified: %s\n", formatFlagsMask(data->flagsModified).c_str());
+                fmt::println("{:#x}|{}\n", data->address, instrText);
+                fmt::println("\tregs read: {}", formatRegsMask(data->regsRead));
+                fmt::println("\tregs written: {}", formatRegsMask(data->regsWritten));
+                fmt::println("\tflags tested: {}", formatFlagsMask(data->flagsTested));
+                fmt::println("\tflags modified: {}", formatFlagsMask(data->flagsModified));
             }
 
             block.regsGen |= data->regsRead & ~block.regsKill;
@@ -211,10 +212,10 @@ bool analyze(Context& ctx, bool verbose)
 
         if (verbose)
         {
-            printf("regs_gen: %s\n", formatRegsMask(block.regsGen).c_str());
-            printf("regs_kill: %s\n", formatRegsMask(block.regsKill).c_str());
-            printf("flags_gen: %s\n", formatFlagsMask(block.flagsGen).c_str());
-            printf("flags_kill: %s\n", formatFlagsMask(block.flagsKill).c_str());
+            fmt::println("regs_gen: {}", formatRegsMask(block.regsGen));
+            fmt::println("regs_kill: {}", formatRegsMask(block.regsKill));
+            fmt::println("flags_gen: {}", formatFlagsMask(block.flagsGen));
+            fmt::println("flags_kill: {}", formatFlagsMask(block.flagsKill));
         }
     }
 
@@ -255,7 +256,7 @@ bool analyze(Context& ctx, bool verbose)
         if (verbose)
         {
             auto str = formatter::toString(program, block.begin, block.end, formatter::Options::HexImmediates);
-            printf("Analyzing block 0x%llX\n==========\n%s\n==========\n", address, str.c_str());
+            fmt::println("Analyzing block {:#x}\n==========\n{}\n==========", address, str);
         }
 
         // We start with the live-out set of the block
@@ -274,20 +275,20 @@ bool analyze(Context& ctx, bool verbose)
             if (verbose)
             {
                 auto instrText = formatter::toString(program, node, formatter::Options::HexImmediates);
-                printf("0x%llX|%s\n", data->address, instrText.c_str());
-                printf("\tflags modified: %s\n", formatFlagsMask(flagsModified).c_str());
-                printf("\tflags tested: %s\n", formatFlagsMask(flagsTested).c_str());
-                printf("\tregs read: %s\n", formatRegsMask(regsRead).c_str());
-                printf("\tregs written: %s\n", formatRegsMask(regsWritten).c_str());
+                fmt::println("{:#x}|{}", data->address, instrText);
+                fmt::println("\tflags modified: {}", formatFlagsMask(flagsModified));
+                fmt::println("\tflags tested: {}", formatFlagsMask(flagsTested));
+                fmt::println("\tregs read: {}", formatRegsMask(regsRead));
+                fmt::println("\tregs written: {}", formatRegsMask(regsWritten));
 
                 if (flagsModified & flagsLive)
                 {
-                    printf("\tlive flags are modified: %s\n", formatFlagsMask(flagsModified & flagsLive).c_str());
+                    fmt::println("\tlive flags are modified: {}", formatFlagsMask(flagsModified & flagsLive));
                 }
 
                 if (flagsTested & flagsLive)
                 {
-                    printf("\tlive flags are tested: %s\n", formatFlagsMask(flagsTested & flagsLive).c_str());
+                    fmt::println("\tlive flags are tested: {}", formatFlagsMask(flagsTested & flagsLive));
                 }
             }
 
@@ -296,14 +297,14 @@ bool analyze(Context& ctx, bool verbose)
             {
                 flagsLive = flagsLive | flagsTested;
                 if (verbose)
-                    printf("\tnew live flags: %s\n", formatFlagsMask(flagsLive).c_str());
+                    fmt::println("\tnew live flags: {}", formatFlagsMask(flagsLive));
             }
 
             if (regsRead)
             {
                 regsLive = regsLive | regsRead;
                 if (verbose)
-                    printf("\tnew live regs: %s\n", formatRegsMask(regsLive).c_str());
+                    fmt::println("\tnew live regs: {}", formatRegsMask(regsLive));
             }
 
             // Store the liveness state for the instruction
@@ -326,8 +327,8 @@ bool analyze(Context& ctx, bool verbose)
 
             if (verbose)
             {
-                printf("\tfinal live flags: %s\n", formatFlagsMask(data->flagsLive).c_str());
-                printf("\tfinal live regs: %s\n", formatRegsMask(data->regsLive).c_str());
+                fmt::println("\tfinal live flags: {}", formatFlagsMask(data->flagsLive));
+                fmt::println("\tfinal live regs: {}", formatRegsMask(data->regsLive));
             }
         }
     }
@@ -338,7 +339,7 @@ bool analyze(Context& ctx, bool verbose)
         std::string script;
         for (const auto& [address, block] : blocks)
         {
-            printf("Results for block 0x%llX\n==========\n", address);
+            fmt::println("Results for block {:#x}\n==========", address);
             for (auto node = block.begin; node != block.end; node = node->getNext())
             {
                 auto data = node->getUserData<InstructionData>();
@@ -364,29 +365,25 @@ bool analyze(Context& ctx, bool verbose)
                 }
                 script += "\"\n";
 
-                printf(
-                    "0x%llX|%s|%s|%s\n",
-                    data->address,
-                    str.c_str(),
-                    formatRegsMask(data->regsLive).c_str(),
-                    formatFlagsMask(data->flagsLive).c_str()
+                fmt::println(
+                    "{:#x}|{}|{}|{}", data->address, str, formatRegsMask(data->regsLive), formatFlagsMask(data->flagsLive)
                 );
 
                 if (data->regsRead & ~data->regsLive)
                 {
-                    printf("\tdead regs read: %s\n", formatRegsMask(data->regsRead & ~data->regsLive).c_str());
+                    fmt::println("\tdead regs read: %s\n", formatRegsMask(data->regsRead & ~data->regsLive).c_str());
                     __debugbreak();
                 }
             }
-            puts("==========");
+            fmt::println("==========");
 
-            printf("\tregs_live_in: %s\n", formatRegsMask(block.regsLiveIn).c_str());
-            printf("\tregs_live_out: %s\n", formatRegsMask(block.regsLiveOut).c_str());
-            printf("\tflags_live_in: %s\n", formatFlagsMask(block.flagsLiveIn).c_str());
-            printf("\tflags_live_out: %s\n", formatFlagsMask(block.flagsLiveOut).c_str());
+            fmt::println("\tregs_live_in: {}", formatRegsMask(block.regsLiveIn));
+            fmt::println("\tregs_live_out: {}", formatRegsMask(block.regsLiveOut));
+            fmt::println("\tflags_live_in: {}", formatFlagsMask(block.flagsLiveIn));
+            fmt::println("\tflags_live_out: {}", formatFlagsMask(block.flagsLiveOut));
         }
 
-        puts(script.c_str());
+        fmt::println("{}", script);
 
         auto toHex = [](uint64_t value)
         {
@@ -408,7 +405,7 @@ bool analyze(Context& ctx, bool verbose)
         }
         dot += "}";
 
-        puts(dot.c_str());
+        fmt::println("{}", dot);
     }
 
     return true;

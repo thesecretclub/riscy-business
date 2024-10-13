@@ -2,6 +2,23 @@
 
 #include <deque>
 #include <zasm/zasm.hpp>
+#include <fmt/format.h>
+
+template <> struct fmt::formatter<zasm::Node::Id> : fmt::formatter<std::string_view>
+{
+    fmt::format_context::iterator format(const zasm::Node::Id& id, fmt::format_context& ctx) const
+    {
+        return fmt::formatter<std::string_view>::format(fmt::format("{}", (uint32_t)id), ctx);
+    }
+};
+
+template <> struct fmt::formatter<zasm::Label::Id> : fmt::formatter<std::string_view>
+{
+    fmt::format_context::iterator format(const zasm::Label::Id& id, fmt::format_context& ctx) const
+    {
+        return fmt::formatter<std::string_view>::format(fmt::format("{}", (int32_t)id), ctx);
+    }
+};
 
 namespace obfuscator
 {

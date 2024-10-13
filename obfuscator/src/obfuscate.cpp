@@ -9,6 +9,8 @@
 #include <zasm/zasm.hpp>
 #include <zasm/formatter/formatter.hpp>
 
+#include <fmt/format.h>
+
 using namespace zasm;
 using namespace obfuscator;
 
@@ -54,10 +56,10 @@ static bool runIsaTests(riscvm_run_t riscvmRun, const std::vector<std::string>& 
                 continue;
         }
 
-        printf("[%s] ", test.name);
+        fmt::print("[{}] ", test.name);
         if (test.size > sizeof(g_code))
         {
-            printf("ERROR (too big)\n");
+            fmt::println("ERROR (too big)");
             continue;
         }
         total++;
@@ -77,15 +79,15 @@ static bool runIsaTests(riscvm_run_t riscvmRun, const std::vector<std::string>& 
         auto status = (int)reg_read(reg_a0);
         if (status != 0)
         {
-            printf("FAILURE (status: %d)\n", status);
+            fmt::println("FAILURE (status: %d)", status);
         }
         else
         {
             successful++;
-            printf("SUCCESS\n");
+            fmt::println("SUCCESS\n");
         }
     }
-    printf("\n%d/%d tests successful (%.2f%%)\n", successful, total, successful * 1.0f / total * 100);
+    fmt::println("\n{}/{} tests successful ({:.2f})", successful, total, successful * 1.0f / total * 100);
     return successful == total;
 }
 
@@ -166,7 +168,7 @@ int main(int argc, char** argv)
     std::vector<uint8_t> pe;
     if (!loadFile(args.input, pe))
     {
-        puts("Failed to load the executable.");
+        fmt::println("Failed to load the executable.");
         return EXIT_FAILURE;
     }
 
@@ -174,43 +176,40 @@ int main(int argc, char** argv)
     std::vector<uint8_t> riscvmRunCode;
     if (!findFunction(pe, "riscvm_run", riscvmRunAddress, riscvmRunCode))
     {
-        puts("Failed to find riscvm_run function.");
+        fmt::println("Failed to find riscvm_run function.");
         return EXIT_FAILURE;
     }
 
-    printf("riscvm_run address: 0x%llX, size: 0x%zX\n", riscvmRunAddress, riscvmRunCode.size());
+    fmt::println("riscvm_run address: {:#x}, size: {:#x}", riscvmRunAddress, riscvmRunCode.size());
 
     Program program(MachineMode::AMD64);
     Context ctx(program);
     if (!disassemble(ctx, riscvmRunAddress, riscvmRunCode))
     {
-        puts("Failed to disassemble riscvm_run function.");
+        fmt::println("Failed to disassemble riscvm_run function.");
         return EXIT_FAILURE;
     }
 
     if (!analyze(ctx, true))
     {
-        puts("Failed to analyze the riscvm_run function.");
+        fmt::println("Failed to analyze the riscvm_run function.");
         return EXIT_FAILURE;
     }
 
     if (!obfuscate(ctx))
     {
-        puts("Failed to obfuscate riscvm_run function.");
+        fmt::println("Failed to obfuscate riscvm_run function.");
         return EXIT_FAILURE;
     }
 
-    puts("");
-    std::string text = formatter::toString(program);
-    puts(text.c_str());
+    fmt::println("\n{}", formatter::toString(program));
 
     // Serialize the obfuscated function
     uint64_t   shellcodeBase = 0;
     Serializer serializer;
     if (auto res = serializer.serialize(program, shellcodeBase); res != zasm::ErrorCode::None)
     {
-        std::cout << "Failed to serialize program at " << std::hex << shellcodeBase << ", "
-                  << res.getErrorName() << "\n";
+        fmt::println("Failed to serialize program at {:#x}, {}", shellcodeBase, res.getErrorName());
         return EXIT_FAILURE;
     }
 
@@ -229,7 +228,7 @@ int main(int argc, char** argv)
     auto shellcode = VirtualAlloc(nullptr, 0x10000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
     if (shellcode == nullptr)
     {
-        puts("Failed to allocate memory for shellcode.");
+        fmt::println("Failed to allocate memory for shellcode.");
         return EXIT_FAILURE;
     }
 
@@ -245,7 +244,7 @@ int main(int argc, char** argv)
         std::vector<uint8_t> payload;
         if (!loadFile(args.payload, payload))
         {
-            puts("Failed to load the payload.");
+            fmt::println("Failed to load the payload.");
             return EXIT_FAILURE;
         }
 

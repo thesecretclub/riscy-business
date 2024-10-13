@@ -2,6 +2,7 @@
 #include <obfuscator/msvc-secure.hpp>
 
 #include <linuxpe>
+#include <fmt/format.h>
 
 #include <cstdio>
 
@@ -34,21 +35,21 @@ bool findFunction(const std::span<uint8_t>& pe, std::string_view name, uint64_t&
     auto pdh = (win::dos_header_t*)pe.data();
     if (pdh->e_magic != win::DOS_HDR_MAGIC)
     {
-        puts("Invalid DOS header.");
+        fmt::println("Invalid DOS header.");
         return false;
     }
 
     auto pnth = (win::nt_headers_x64_t*)((uint8_t*)pe.data() + pdh->e_lfanew);
     if (pnth->signature != win::NT_HDR_MAGIC)
     {
-        puts("Invalid NT header.");
+        fmt::println("Invalid NT header.");
         return false;
     }
 
     auto poh = &pnth->optional_header;
     if (poh->magic != win::OPT_HDR64_MAGIC)
     {
-        puts("Invalid optional header.");
+        fmt::println("Invalid optional header.");
         return false;
     }
 
@@ -88,7 +89,7 @@ bool findFunction(const std::span<uint8_t>& pe, std::string_view name, uint64_t&
 
     if (riscvmRunRva == 0)
     {
-        puts("Failed to find riscvm_run export.");
+        fmt::println("Failed to find riscvm_run export.");
         return false;
     }
 

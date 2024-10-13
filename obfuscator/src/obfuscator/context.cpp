@@ -1,5 +1,7 @@
 #include <obfuscator/context.hpp>
+
 #include <zasm/formatter/formatter.hpp>
+#include <fmt/format.h>
 
 namespace obfuscator
 {
@@ -98,7 +100,7 @@ uint32_t regMask(const Reg& reg)
     if (!reg.isGp())
     {
         auto regText = formatter::toString(reg);
-        printf("\tunsupported register type %s\n", regText.c_str());
+        fmt::println("\tunsupported register type {}", regText);
         return 0;
     }
 

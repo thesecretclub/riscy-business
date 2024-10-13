@@ -73,6 +73,15 @@ FetchContent_Declare(args
 )
 FetchContent_MakeAvailable(args)
 
+message(STATUS "Fetching fmt...")
+FetchContent_Declare(fmt
+	URL
+		"https://github.com/fmtlib/fmt/releases/download/10.2.1/fmt-10.2.1.zip"
+	URL_HASH
+		SHA256=312151a2d13c8327f5c9c586ac6cf7cddc1658e8f53edae0ec56509c8fa516c9
+)
+FetchContent_MakeAvailable(fmt)
+
 # Target: linux-pe
 add_library(linux-pe INTERFACE)
 
@@ -107,6 +116,7 @@ target_include_directories(obfuscator PUBLIC
 target_link_libraries(obfuscator PUBLIC
 	zasm::zasm
 	linux-pe
+	fmt::fmt
 )
 
 # Target: obfuscate
