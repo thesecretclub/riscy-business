@@ -179,7 +179,7 @@ Context::addInstructionData(Node* node, uint64_t address, MachineMode mode, cons
 
         case x86::Category::Ret:
         {
-            // The ret instruction 'reads' all nonvolatile registers and the return value
+            // The ret instruction 'reads' all non-volatile registers and the return value
             data->regsRead = regMask(x86::rsp) | regMask(x86::rbx) | regMask(x86::rbp) | regMask(x86::rsi)
                            | regMask(x86::rdi) | regMask(x86::r12) | regMask(x86::r13) | regMask(x86::r14)
                            | regMask(x86::r15) | regMask(x86::rax);

@@ -150,12 +150,14 @@ struct Arguments : ArgumentParser
 {
     std::string input;
     std::string output;
+    std::string cleanOutput;
     std::string payload;
 
     Arguments(int argc, char** argv) : ArgumentParser("Obfuscates the riscvm_run function")
     {
         addPositional("input", input, "Input PE file to obfuscate", true);
-        addString("-output", output, "Obfuscated function output");
+        addString("-output", output, "Obfuscated function binary blob");
+        addString("-clean-output", cleanOutput, "Unobfuscated function binary blob");
         addString("-payload", payload, "Payload to execute (Windows only)");
         parseOrExit(argc, argv);
     }
@@ -196,6 +198,30 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    auto serializeToFile = [&program](const std::string& outputFile, uint64_t base = 0)
+    {
+        // Serialize the obfuscated function
+        Serializer serializer;
+        if (auto res = serializer.serialize(program, base); res != zasm::ErrorCode::None)
+        {
+            fmt::println("Failed to serialize program at {:#x}, {}", base, res.getErrorName());
+            return false;
+        }
+
+        auto ptr  = serializer.getCode();
+        auto size = serializer.getCodeSize();
+
+        // Save the code to disk
+        std::ofstream ofs(outputFile, std::ios::binary);
+        ofs.write((char*)ptr, size);
+        return true;
+    };
+
+    if (!args.cleanOutput.empty() && !serializeToFile(args.cleanOutput))
+    {
+        return EXIT_FAILURE;
+    }
+
     if (!obfuscate(ctx))
     {
         fmt::println("Failed to obfuscate riscvm_run function.");
@@ -204,23 +230,9 @@ int main(int argc, char** argv)
 
     fmt::println("\n{}", formatter::toString(program));
 
-    // Serialize the obfuscated function
-    uint64_t   shellcodeBase = 0;
-    Serializer serializer;
-    if (auto res = serializer.serialize(program, shellcodeBase); res != zasm::ErrorCode::None)
+    if (!args.output.empty() && !serializeToFile(args.output))
     {
-        fmt::println("Failed to serialize program at {:#x}, {}", shellcodeBase, res.getErrorName());
         return EXIT_FAILURE;
-    }
-
-    auto ptr  = serializer.getCode();
-    auto size = serializer.getCodeSize();
-
-    // Save the obfuscated code to disk
-    if (!args.output.empty())
-    {
-        std::ofstream ofs(args.output, std::ios::binary);
-        ofs.write((char*)ptr, size);
     }
 
     // Run the ISA tests (Windows only)
