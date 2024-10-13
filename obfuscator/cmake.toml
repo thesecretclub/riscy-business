@@ -25,9 +25,9 @@ tag = "v1.0"
 url = "https://github.com/fmtlib/fmt/releases/download/10.2.1/fmt-10.2.1.zip"
 sha256 = "312151a2d13c8327f5c9c586ac6cf7cddc1658e8f53edae0ec56509c8fa516c9"
 
-[target.linux-pe]
-type = "interface"
-include-directories = ["src/linux-pe"]
+[fetch-content.linux-pe]
+git = "https://github.com/can1357/linux-pe"
+tag = "be6d1f6fc30fb8058b5220e0bb2652a6dc8ec0b0"
 
 [target.obfuscator]
 type = "static"

@@ -82,12 +82,14 @@ FetchContent_Declare(fmt
 )
 FetchContent_MakeAvailable(fmt)
 
-# Target: linux-pe
-add_library(linux-pe INTERFACE)
-
-target_include_directories(linux-pe INTERFACE
-	"src/linux-pe"
+message(STATUS "Fetching linux-pe (be6d1f6fc30fb8058b5220e0bb2652a6dc8ec0b0)...")
+FetchContent_Declare(linux-pe
+	GIT_REPOSITORY
+		"https://github.com/can1357/linux-pe"
+	GIT_TAG
+		be6d1f6fc30fb8058b5220e0bb2652a6dc8ec0b0
 )
+FetchContent_MakeAvailable(linux-pe)
 
 # Target: obfuscator
 set(obfuscator_SOURCES
