@@ -1,6 +1,7 @@
 #pragma once
 
 #include <deque>
+#include <vector>
 #include <zasm/zasm.hpp>
 #include <fmt/format.h>
 

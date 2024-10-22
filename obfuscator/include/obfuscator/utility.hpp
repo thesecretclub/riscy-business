@@ -4,6 +4,7 @@
 #include <vector>
 #include <span>
 #include <string_view>
+#include <string>
 
 namespace obfuscator
 {
