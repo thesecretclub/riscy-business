@@ -10,6 +10,7 @@
 #include <zasm/formatter/formatter.hpp>
 
 #include <fmt/format.h>
+#include <args.hpp>
 
 using namespace zasm;
 using namespace obfuscator;
@@ -18,133 +19,6 @@ using namespace obfuscator;
 #include <obfuscator/disassemble.hpp>
 #include <obfuscator/analyze.hpp>
 #include <obfuscator/obfuscate.hpp>
-
-#ifdef _WIN32
-
-namespace vm
-{
-#define CUSTOM_SYSCALLS
-#include "../../riscvm/riscvm.h"
-#include "../../riscvm/riscvm-code.h"
-} // namespace vm
-
-typedef void (*riscvm_run_t)(vm::riscvm*);
-
-#include <Windows.h>
-#include "../../riscvm/isa-tests/data.h"
-
-static bool runIsaTests(riscvm_run_t riscvmRun, const std::vector<std::string>& filter = {})
-{
-    using namespace vm;
-
-    auto total      = 0;
-    auto successful = 0;
-    for (const auto& test : tests)
-    {
-        if (!filter.empty())
-        {
-            auto allowed = false;
-            for (const auto& white : filter)
-            {
-                if (white == test.name)
-                {
-                    allowed = true;
-                    break;
-                }
-            }
-            if (!allowed)
-                continue;
-        }
-
-        fmt::print("[{}] ", test.name);
-        if (test.size > sizeof(g_code))
-        {
-            fmt::println("ERROR (too big)");
-            continue;
-        }
-        total++;
-
-        memset(g_code, 0, sizeof(g_code));
-        memcpy(g_code, test.data, test.size);
-        riscvm vm         = {};
-        vm.handle_syscall = [](vm::riscvm*, uint64_t, uint64_t*)
-        {
-            return false;
-        };
-        auto self = &vm;
-        reg_write(reg_sp, (uint64_t)&g_stack[sizeof(g_stack) - 0x10]);
-        self->pc = (int64_t)g_code + test.offset;
-        riscvmRun(self);
-
-        auto status = (int)reg_read(reg_a0);
-        if (status != 0)
-        {
-            fmt::println("FAILURE (status: %d)", status);
-        }
-        else
-        {
-            successful++;
-            fmt::println("SUCCESS\n");
-        }
-    }
-    fmt::println("\n{}/{} tests successful ({:.2f})", successful, total, successful * 1.0f / total * 100);
-    return successful == total;
-}
-
-static bool riscvm_handle_syscall(vm::riscvm* self, uint64_t code, uint64_t* result)
-{
-    switch (code)
-    {
-    case 10000: // exit
-    {
-        return false;
-    }
-
-    case 20000: // host_call
-    {
-        uint64_t  func_addr = reg_read(vm::reg_a0);
-        uint64_t* args      = (uint64_t*)riscvm_getptr(self, reg_read(vm::reg_a1));
-
-        using syscall_fn = uint64_t (*)(
-            uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t
-        );
-
-        syscall_fn fn = (syscall_fn)func_addr;
-        *result =
-            fn(args[0],
-               args[1],
-               args[2],
-               args[3],
-               args[4],
-               args[5],
-               args[6],
-               args[7],
-               args[8],
-               args[9],
-               args[10],
-               args[11],
-               args[12]);
-        break;
-    }
-
-    case 20001: // get_peb
-    {
-        *result = __readgsqword(0x60);
-        break;
-    }
-
-    default:
-    {
-        panic("illegal system call %llu (0x%llX)\n", code, code);
-        return false;
-    }
-    }
-    return true;
-}
-
-#endif // _WIN32
-
-#include <args.hpp>
 
 struct Arguments : ArgumentParser
 {
@@ -234,41 +108,6 @@ int main(int argc, char** argv)
     {
         return EXIT_FAILURE;
     }
-
-    // Run the ISA tests (Windows only)
-#ifdef _WIN32
-    auto shellcode = VirtualAlloc(nullptr, 0x10000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-    if (shellcode == nullptr)
-    {
-        fmt::println("Failed to allocate memory for shellcode.");
-        return EXIT_FAILURE;
-    }
-
-    memcpy(shellcode, ptr, size);
-    auto riscvmRun = (riscvm_run_t)shellcode;
-
-    if (!runIsaTests(riscvmRun))
-        __debugbreak();
-
-    // Run the payload if specified on the command line
-    if (!args.payload.empty())
-    {
-        std::vector<uint8_t> payload;
-        if (!loadFile(args.payload, payload))
-        {
-            fmt::println("Failed to load the payload.");
-            return EXIT_FAILURE;
-        }
-
-        using namespace vm;
-        vm::riscvm self;
-        self.handle_syscall     = riscvm_handle_syscall;
-        self.pc                 = (int64_t)payload.data();
-        self.regs[vm::reg_zero] = 0;
-        self.regs[vm::reg_sp]   = (uint64_t)(uint64_t)&g_stack[sizeof(g_stack) - 0x10];
-        riscvmRun(&self);
-    }
-#endif
 
     return EXIT_SUCCESS;
 }
