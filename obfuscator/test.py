@@ -139,6 +139,9 @@ def main():
     success = 0
     for test in glob(os.path.join(os.path.dirname(__file__), "..", "riscvm", "isa-tests", "rv64*")):
         basename = os.path.basename(test)
+        _, ext = os.path.splitext(basename)
+        if ext != "":
+            continue
         print(f"=== {basename} ===")
         with open(test, "rb") as f:
             f.seek(0x1190)
