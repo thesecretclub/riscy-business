@@ -30,7 +30,9 @@ class RISCVM:
         self.heap_size = heap_size
         self.emu.mem_map(self.heap_begin, self.heap_size, MemoryProtection.ReadWrite)
 
-    def run(self, riscvm_run_address: int, payload: bytes):
+        self.coverage = []
+
+    def run(self, riscvm_run_address: int, payload: bytes, *, get_coverage = False):
         # Reset instruction count
         self.emu.icount = 0
 
@@ -82,7 +84,16 @@ class RISCVM:
             self.emu.reg_write(reg, value)
 
         # Run emulation
-        status = self.emu.run()
+        if get_coverage:
+            while True:
+                rip = self.emu.reg_read("rip")
+                if rip != fake_return:
+                    self.coverage.append(rip)
+                status = self.emu.step(1)
+                if status != RunStatus.InstructionLimit:
+                    break
+        else:
+            status = self.emu.run()
         rip = self.emu.reg_read("rip")
         if rip == fake_return:
             for reg, (skip, expected) in regvalues.items():
@@ -158,6 +169,7 @@ def main():
     parser.add_argument("--obfuscator", help="Path to the obfuscator binary", default="build/obfuscate")
     parser.add_argument("--no-transform", help="Disable transformations", action="store_true")
     parser.add_argument("--no-obfuscator", help="Directly map the executable, skipping obfuscation", action="store_true")
+    parser.add_argument("--coverage", help="Output lighthouse coverage")
     args = parser.parse_args()
 
     riscvm = RISCVM()
@@ -217,13 +229,17 @@ def main():
             f.seek(0x1190)
             payload = f.read()
         total += 1
-        result = riscvm.run(riscvm_run_address, payload)
+        result = riscvm.run(riscvm_run_address, payload, get_coverage=args.coverage)
         if result == 0:
             print(f"    SUCCESS (icount: {riscvm.emu.icount})")
             success += 1
         else:
             print("    FAILURE")
     print(f"\n{success}/{total} ISA tests succeeded")
+    if args.coverage:
+        with open(args.coverage, "w") as f:
+            for addr in riscvm.coverage:
+                f.write(f"{hex(addr)}\n")
     sys.exit(0 if success == total else 1)
 
 if __name__ == "__main__":
