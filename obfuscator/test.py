@@ -41,7 +41,9 @@ class RISCVM:
         self.emu.mem_write(vm_bytecode, payload)
 
         # Write VM context
+        a0_offset = 8 * 11
         self.emu.mem_write(vm_context, vm_bytecode.to_bytes(8, "little")) # riscvm.pc
+        self.emu.mem_write(vm_context + a0_offset, b"\x11\x22\x33\x44\x55\x66\x77\x88") # riscvm.a0
 
         # Set up stack
         rsp = self.stack_begin + self.stack_size - 0x18
@@ -87,7 +89,7 @@ class RISCVM:
                 if value != expected:
                     print(f"Expected value {hex(expected)} for non-volatile register {reg}, got {hex(value)}")
 
-            a0 = int.from_bytes(self.emu.mem_read(vm_context + 8 * 11, 8), "little") # riscvm.a0
+            a0 = int.from_bytes(self.emu.mem_read(vm_context + a0_offset, 8), "little") # riscvm.a0
             return a0
         print(f"status: {status}, exception: ({self.emu.exception_code}, {hex(self.emu.exception_value)})")
         print(f"RIP: {hex(rip)}")
