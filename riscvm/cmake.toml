@@ -11,10 +11,8 @@ RISCVM_SILENT_PANIC = false
 RISCVM_TRACING = false
 RISCVM_CUSTOM_SYSCALLS = false
 
-[target.riscvm]
-type = "executable"
-sources = ["main.cpp", "riscvm.cpp"]
-headers = ["riscvm.h", "opcodes.h", "shuffled_opcodes.h", "trace.h", "riscvm-code.h"]
+[target.riscvm-options]
+type = "interface"
 compile-features = ["cxx_std_17"]
 RISCVM_DIRECT_DISPATCH.compile-definitions = ["DIRECT_DISPATCH"]
 RISCVM_CODE_ENCRYPTION.compile-definitions = ["CODE_ENCRYPTION"]
@@ -22,12 +20,19 @@ RISCVM_OPCODE_SHUFFLING.compile-definitions = ["OPCODE_SHUFFLING"]
 RISCVM_DEBUG_SYSCALLS.compile-definitions = ["DEBUG_SYSCALLS"]
 RISCVM_SILENT_PANIC.compile-definitions = ["SILENT_PANIC"]
 RISCVM_TRACING.compile-definitions = ["TRACING"]
-RISCVM_CUSTOM_SYSCALLS.compile-definitions = ["CUSTOM_SYSCALLS"]
 clang-cl.compile-options = ["/clang:-fno-jump-tables", "/clang:-mno-sse"]
 clang.compile-options = ["-fno-jump-tables", "-mno-sse"]
 apple.compile-options = ["-Wno-deprecated-declarations"]
 msvc.link-options = ["/DYNAMICBASE:NO", "/INCREMENTAL:NO"]
 msvc.compile-definitions = ["_CRT_SECURE_NO_WARNINGS"]
+
+[target.riscvm]
+type = "executable"
+sources = ["main.cpp", "riscvm.cpp"]
+headers = ["riscvm.h", "opcodes.h", "shuffled_opcodes.h", "trace.h", "riscvm-code.h"]
+compile-features = ["cxx_std_17"]
+RISCVM_CUSTOM_SYSCALLS.compile-definitions = ["CUSTOM_SYSCALLS"]
+link-libraries = ["riscvm-options"]
 
 [target.tests]
 type = "executable"
@@ -35,8 +40,7 @@ sources = ["tests.cpp", "riscvm.cpp"]
 compile-features = ["cxx_std_17"]
 RISCVM_TRACING.compile-definitions = ["TRACING"]
 compile-definitions = ["CUSTOM_SYSCALLS"]
-apple.compile-options = ["-Wno-deprecated-declarations"]
-msvc.link-options = ["/DYNAMICBASE:NO", "/INCREMENTAL:NO"]
+link-libraries = ["riscvm-options"]
 
 # Only for IDE purposes, not actually built here
 [target.riscvm-crt0]

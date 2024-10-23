@@ -8,15 +8,18 @@
 
 int main(int argc, char** argv)
 {
+#ifndef DISABLE_FILTER
     std::vector<const char*> filter;
     for (int i = 1; i < argc; i++)
     {
         filter.push_back(argv[i]);
     }
+#endif
     auto total      = 0;
     auto successful = 0;
     for (const auto& test : tests)
     {
+#ifndef DISABLE_FILTER
         if (!filter.empty())
         {
             auto allowed = false;
@@ -31,6 +34,7 @@ int main(int argc, char** argv)
             if (!allowed)
                 continue;
         }
+#endif
 
         printf("[%s] ", test.name);
         if (test.size > sizeof(g_code))
@@ -44,6 +48,7 @@ int main(int argc, char** argv)
         memcpy(g_code, test.data, test.size);
         riscvm vm   = {};
         auto   self = &vm;
+        reg_write(reg_a0, 0x1122334455667788);
         reg_write(reg_sp, (uint64_t)&g_stack[sizeof(g_stack) - 0x10]);
         self->pc             = (int64_t)g_code + test.offset;
         self->handle_syscall = [](riscvm* self, uint64_t code, uint64_t* result)

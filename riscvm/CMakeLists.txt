@@ -35,6 +35,82 @@ option(RISCVM_CUSTOM_SYSCALLS "" OFF)
 
 project(riscvm)
 
+# Target: riscvm-options
+add_library(riscvm-options INTERFACE)
+
+if(RISCVM_DIRECT_DISPATCH) # RISCVM_DIRECT_DISPATCH
+	target_compile_definitions(riscvm-options INTERFACE
+		DIRECT_DISPATCH
+	)
+endif()
+
+if(RISCVM_CODE_ENCRYPTION) # RISCVM_CODE_ENCRYPTION
+	target_compile_definitions(riscvm-options INTERFACE
+		CODE_ENCRYPTION
+	)
+endif()
+
+if(RISCVM_OPCODE_SHUFFLING) # RISCVM_OPCODE_SHUFFLING
+	target_compile_definitions(riscvm-options INTERFACE
+		OPCODE_SHUFFLING
+	)
+endif()
+
+if(RISCVM_DEBUG_SYSCALLS) # RISCVM_DEBUG_SYSCALLS
+	target_compile_definitions(riscvm-options INTERFACE
+		DEBUG_SYSCALLS
+	)
+endif()
+
+if(RISCVM_SILENT_PANIC) # RISCVM_SILENT_PANIC
+	target_compile_definitions(riscvm-options INTERFACE
+		SILENT_PANIC
+	)
+endif()
+
+if(RISCVM_TRACING) # RISCVM_TRACING
+	target_compile_definitions(riscvm-options INTERFACE
+		TRACING
+	)
+endif()
+
+if(MSVC) # msvc
+	target_compile_definitions(riscvm-options INTERFACE
+		_CRT_SECURE_NO_WARNINGS
+	)
+endif()
+
+target_compile_features(riscvm-options INTERFACE
+	cxx_std_17
+)
+
+if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang-cl
+	target_compile_options(riscvm-options INTERFACE
+		"/clang:-fno-jump-tables"
+		"/clang:-mno-sse"
+	)
+endif()
+
+if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang
+	target_compile_options(riscvm-options INTERFACE
+		-fno-jump-tables
+		-mno-sse
+	)
+endif()
+
+if(APPLE) # apple
+	target_compile_options(riscvm-options INTERFACE
+		-Wno-deprecated-declarations
+	)
+endif()
+
+if(MSVC) # msvc
+	target_link_options(riscvm-options INTERFACE
+		"/DYNAMICBASE:NO"
+		"/INCREMENTAL:NO"
+	)
+endif()
+
 # Target: riscvm
 set(riscvm_SOURCES
 	cmake.toml
@@ -52,51 +128,9 @@ add_executable(riscvm)
 target_sources(riscvm PRIVATE ${riscvm_SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${riscvm_SOURCES})
 
-if(RISCVM_DIRECT_DISPATCH) # RISCVM_DIRECT_DISPATCH
-	target_compile_definitions(riscvm PRIVATE
-		DIRECT_DISPATCH
-	)
-endif()
-
-if(RISCVM_CODE_ENCRYPTION) # RISCVM_CODE_ENCRYPTION
-	target_compile_definitions(riscvm PRIVATE
-		CODE_ENCRYPTION
-	)
-endif()
-
-if(RISCVM_OPCODE_SHUFFLING) # RISCVM_OPCODE_SHUFFLING
-	target_compile_definitions(riscvm PRIVATE
-		OPCODE_SHUFFLING
-	)
-endif()
-
-if(RISCVM_DEBUG_SYSCALLS) # RISCVM_DEBUG_SYSCALLS
-	target_compile_definitions(riscvm PRIVATE
-		DEBUG_SYSCALLS
-	)
-endif()
-
-if(RISCVM_SILENT_PANIC) # RISCVM_SILENT_PANIC
-	target_compile_definitions(riscvm PRIVATE
-		SILENT_PANIC
-	)
-endif()
-
-if(RISCVM_TRACING) # RISCVM_TRACING
-	target_compile_definitions(riscvm PRIVATE
-		TRACING
-	)
-endif()
-
 if(RISCVM_CUSTOM_SYSCALLS) # RISCVM_CUSTOM_SYSCALLS
 	target_compile_definitions(riscvm PRIVATE
 		CUSTOM_SYSCALLS
-	)
-endif()
-
-if(MSVC) # msvc
-	target_compile_definitions(riscvm PRIVATE
-		_CRT_SECURE_NO_WARNINGS
 	)
 endif()
 
@@ -104,32 +138,9 @@ target_compile_features(riscvm PRIVATE
 	cxx_std_17
 )
 
-if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang-cl
-	target_compile_options(riscvm PRIVATE
-		"/clang:-fno-jump-tables"
-		"/clang:-mno-sse"
-	)
-endif()
-
-if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang
-	target_compile_options(riscvm PRIVATE
-		-fno-jump-tables
-		-mno-sse
-	)
-endif()
-
-if(APPLE) # apple
-	target_compile_options(riscvm PRIVATE
-		-Wno-deprecated-declarations
-	)
-endif()
-
-if(MSVC) # msvc
-	target_link_options(riscvm PRIVATE
-		"/DYNAMICBASE:NO"
-		"/INCREMENTAL:NO"
-	)
-endif()
+target_link_libraries(riscvm PRIVATE
+	riscvm-options
+)
 
 get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
 if(NOT CMKR_VS_STARTUP_PROJECT)
@@ -162,18 +173,9 @@ target_compile_features(tests PRIVATE
 	cxx_std_17
 )
 
-if(APPLE) # apple
-	target_compile_options(tests PRIVATE
-		-Wno-deprecated-declarations
-	)
-endif()
-
-if(MSVC) # msvc
-	target_link_options(tests PRIVATE
-		"/DYNAMICBASE:NO"
-		"/INCREMENTAL:NO"
-	)
-endif()
+target_link_libraries(tests PRIVATE
+	riscvm-options
+)
 
 get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
 if(NOT CMKR_VS_STARTUP_PROJECT)
