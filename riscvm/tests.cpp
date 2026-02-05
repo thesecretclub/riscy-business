@@ -1,4 +1,6 @@
 #include <cstddef>
+#include <cstdlib>
+#include <cstring>
 #include <memory>
 #include <vector>
 

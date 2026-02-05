@@ -14,11 +14,13 @@ SECTIONS
     }
 
     .data : {
+        __data_start = .;
         *(.rodata)
         *(.rodata.*)
         *(.data)
         *(.data.*)
         *(.eh_frame)
+        __data_end = .;
     }
 
     .init : {

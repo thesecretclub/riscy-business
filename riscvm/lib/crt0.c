@@ -1,5 +1,6 @@
 static void exit(int exit_code);
 static void riscvm_relocs();
+static void riscvm_decrypt_data();
 void        riscvm_imports() __attribute__((weak));
 static void riscvm_init_arrays();
 extern int __attribute((noinline)) main();
@@ -8,6 +9,7 @@ extern int __attribute((noinline)) main();
 void _start()
 {
     riscvm_relocs();
+    riscvm_decrypt_data();
     riscvm_imports();
     riscvm_init_arrays();
     exit(main());
@@ -60,6 +62,83 @@ static __attribute((noinline)) void riscvm_relocs()
         {
             asm volatile("ebreak");
         }
+    }
+}
+
+extern uint8_t __data_start[];
+extern uint8_t __data_end[];
+
+static __attribute((noinline)) uint32_t riscvm_tetra_twist(uint32_t input)
+{
+    uint32_t prime1 = 0x9E3779B1;
+    input ^= input >> 15;
+    input *= prime1;
+    input ^= input >> 12;
+    input *= prime1;
+    input ^= input >> 4;
+    input *= prime1;
+    input ^= input >> 16;
+    return input;
+}
+
+static __attribute((noinline)) void riscvm_decrypt_data()
+{
+    // Check if data encryption feature flag is set in the FEAT section
+    // The FEAT section is at the end of the binary (after relocations)
+    // We look for the data_encrypted bit (bit 2) in the features byte
+    // If not set, this is a no-op
+    uintptr_t data_start = (uintptr_t)__data_start;
+    uintptr_t data_end = (uintptr_t)__data_end;
+    uintptr_t data_size = data_end - data_start;
+
+    if (data_size == 0)
+        return;
+
+    // The encryption key is stored in the FEAT section which is parsed by the host.
+    // For data decryption in the guest, the host passes the key and data_encrypted flag
+    // via a register or we read it from the FEAT trailer appended after relocations.
+    // We scan backwards from __relocs_start to find the FEAT magic.
+    uint8_t* feat_scan = __relocs_start;
+    // Walk past the relocation entries to find FEAT
+    if (*(uint32_t*)feat_scan == 'ALER')
+    {
+        feat_scan += 4; // skip RELA magic
+        while (*feat_scan != 0)
+            feat_scan += 13; // skip relocation entries (1+4+8 bytes each)
+        feat_scan += 1; // skip null terminator
+    }
+
+    if (*(uint32_t*)feat_scan != 'TAEF')
+        return; // No FEAT section found
+
+    uint8_t features = feat_scan[4];
+    if (!(features & 4)) // bit 2 = data_encrypted
+        return;
+
+    uint32_t key = *(uint32_t*)(feat_scan + 5);
+    uintptr_t load_base = (uintptr_t)__base;
+
+    // Decrypt in 4-byte chunks
+    uintptr_t aligned_size = data_size - (data_size % 4);
+    for (uintptr_t i = 0; i < aligned_size; i += 4)
+    {
+        uintptr_t offset = (data_start - load_base) + i;
+        uint32_t* ptr = (uint32_t*)(data_start + i);
+        uint32_t xor_key = riscvm_tetra_twist(key + (uint32_t)offset);
+        *ptr ^= xor_key;
+    }
+    // Handle remaining bytes
+    uintptr_t remainder = data_size % 4;
+    if (remainder > 0)
+    {
+        uintptr_t offset = (data_start - load_base) + aligned_size;
+        uint32_t tmp = 0;
+        for (uintptr_t j = 0; j < remainder; j++)
+            ((uint8_t*)&tmp)[j] = ((uint8_t*)(data_start + aligned_size))[j];
+        uint32_t xor_key = riscvm_tetra_twist(key + (uint32_t)offset);
+        tmp ^= xor_key;
+        for (uintptr_t j = 0; j < remainder; j++)
+            ((uint8_t*)(data_start + aligned_size))[j] = ((uint8_t*)&tmp)[j];
     }
 }
 
@@ -344,6 +423,42 @@ typedef struct _IMAGE_NT_HEADERS
 } IMAGE_NT_HEADERS;
 #pragma pack(pop)
 
+static uintptr_t riscvm_resolve_forwarded_export(const char* forward_str)
+{
+    // Forwarded export format: "DLL.FunctionName"
+    // Find the dot separator
+    const char* dot = forward_str;
+    while (*dot != '\0' && *dot != '.')
+        dot++;
+    if (*dot != '.')
+        return 0;
+
+    // Build the DLL name with ".dll" suffix for hash lookup
+    // We need a temporary buffer: copy the module name and append ".dll"
+    char dll_name[256];
+    uintptr_t name_len = (uintptr_t)(dot - forward_str);
+    if (name_len + 5 > sizeof(dll_name)) // +5 for ".dll\0"
+        return 0;
+
+    for (uintptr_t i = 0; i < name_len; i++)
+        dll_name[i] = forward_str[i];
+    dll_name[name_len]     = '.';
+    dll_name[name_len + 1] = 'd';
+    dll_name[name_len + 2] = 'l';
+    dll_name[name_len + 3] = 'l';
+    dll_name[name_len + 4] = '\0';
+
+    uint32_t module_hash = hash_x65599(dll_name, false);
+    uintptr_t module_base = riscvm_resolve_dll(module_hash);
+    if (!module_base)
+        return 0;
+
+    // Resolve the function name from the target module
+    const char* func_name = dot + 1;
+    uint32_t func_hash = hash_x65599(func_name, true);
+    return riscvm_resolve_import(module_base, func_hash);
+}
+
 uintptr_t riscvm_resolve_import(uintptr_t image, uint32_t export_hash)
 {
     IMAGE_DOS_HEADER*       dos_header      = (IMAGE_DOS_HEADER*)image;
@@ -359,12 +474,14 @@ uintptr_t riscvm_resolve_import(uintptr_t image, uint32_t export_hash)
     {
         char*     name = (char*)(image + names[i]);
         uintptr_t func = (uintptr_t)(image + funcs[ords[i]]);
-        // Ignore forwarded exports (TODO: handle properly?)
-        if (func >= (uintptr_t)export_dir && func < (uintptr_t)export_dir + export_dir_size)
-            continue;
-        uint32_t hash = hash_x65599(name, true);
+        uint32_t  hash = hash_x65599(name, true);
         if (hash == export_hash)
         {
+            // Check if this is a forwarded export
+            if (func >= (uintptr_t)export_dir && func < (uintptr_t)export_dir + export_dir_size)
+            {
+                return riscvm_resolve_forwarded_export((const char*)func);
+            }
             return func;
         }
     }

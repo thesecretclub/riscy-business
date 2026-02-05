@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import sys
 import argparse
@@ -59,6 +60,21 @@ def get_functions(sections, link_base):
         'address': int(s['vma'], 16) - link_base,
         'vma': int(s['vma'], 16),
     } for s in symbols if s['align'] == '1' and s['size'] != '0']
+
+def get_data_section(sections, link_base):
+    """Returns the offset and size of the .data section relative to the binary start."""
+    data_section = sections.get(".data", None)
+    if data_section is None:
+        return None
+    vma = int(data_section['vma'], 16)
+    size = int(data_section['size'], 16)
+    if size == 0:
+        return None
+    return {
+        'address': vma - link_base,
+        'size': size,
+        'vma': vma,
+    }
 
 def tetra_twist(data: bytes) -> int:
     """
@@ -138,10 +154,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="Input RISC-V binary")
     parser.add_argument("--shuffle", "-s", help="Shuffle the operands", action="store_true", default=False)
-    parser.add_argument("--encrypt", "-e", help="Encrypt Binary", action="store_true", default=False)
+    parser.add_argument("--encrypt", "-e", help="Encrypt code section", action="store_true", default=False)
+    parser.add_argument("--encrypt-data", "-ed", help="Encrypt data section", action="store_true", default=False)
     parser.add_argument("--map", "-m", help="Input map file", required=True)
     parser.add_argument("--output", "-o", help="Output binary file", required=True)
-    parser.add_argument("--key", "-k", help="Encryption key (hex, int)", default="0xDEADBEEF")
+    parser.add_argument("--key", "-k", help="Encryption key (hex, int, or 'random')", default="random")
     parser.add_argument("--shuffle-map", "-sm", help="Shuffle map file")
     parser.add_argument("--opcodes-map", "-om", help="Opcodes map file")
 
@@ -153,12 +170,17 @@ def main():
     opcodes_json: str = args.opcodes_map
     shuffle: bool = args.shuffle
     encrypt: bool = args.encrypt
+    encrypt_data: bool = args.encrypt_data
 
-    try:
-        key = int(args.key, 0)
-    except:
-        print("Invalid key specified, must be a hex or int value")
-        sys.exit(1)
+    if args.key == "random":
+        key = int.from_bytes(os.urandom(4), 'little')
+        print(f"Generated random encryption key: {hex(key)}")
+    else:
+        try:
+            key = int(args.key, 0)
+        except:
+            print("Invalid key specified, must be a hex or int value, or 'random'")
+            sys.exit(1)
 
     if key < 0 or key > 0xFFFFFFFF:
         print("Invalid key specified, must be a 32-bit value")
@@ -221,6 +243,34 @@ def main():
                 dword = dword ^ transform(offset, key)
             binary[offset:offset+4] = struct.pack("<I", dword)
 
+    # Encrypt the data section if requested
+    if encrypt_data and encrypt:
+        data_section = get_data_section(sections, link_base)
+        if data_section is not None:
+            print(f"Encrypting data section at {hex(data_section['vma'])} with size {hex(data_section['size'])}")
+            # Encrypt in 4-byte chunks, pad the last chunk if needed
+            data_offset = data_section['address']
+            data_size = data_section['size']
+            for i in range(0, data_size - (data_size % 4), 4):
+                offset = data_offset + i
+                dword, = struct.unpack("<I", binary[offset:offset+4])
+                dword = dword ^ transform(offset, key)
+                binary[offset:offset+4] = struct.pack("<I", dword)
+            # Handle remaining bytes (if data size is not 4-byte aligned)
+            remainder = data_size % 4
+            if remainder > 0:
+                offset = data_offset + data_size - remainder
+                pad_bytes = binary[offset:offset+remainder] + b'\x00' * (4 - remainder)
+                dword, = struct.unpack("<I", pad_bytes)
+                dword = dword ^ transform(offset, key)
+                encrypted = struct.pack("<I", dword)[:remainder]
+                binary[offset:offset+remainder] = encrypted
+        else:
+            print("Warning: --encrypt-data specified but no .data section found")
+    elif encrypt_data and not encrypt:
+        print("Warning: --encrypt-data requires --encrypt to be enabled")
+        sys.exit(1)
+
     # Walk and verify the relocations
     rela_offset = binary.rfind(b"RELA")
     if rela_offset == -1:
@@ -241,6 +291,8 @@ def main():
         features |= 1
     if shuffle:
         features |= 2
+    if encrypt_data:
+        features |= 4
     binary += b"FEAT"
     binary += struct.pack("<BI", features, key)
 

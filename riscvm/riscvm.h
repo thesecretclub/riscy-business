@@ -279,4 +279,9 @@ ALWAYS_INLINE inline int32_t bit_signer(uint32_t field, uint32_t size)
 }
 
 void riscvm_loadfile(riscvm_ptr self, const char* filename);
+
+#ifdef _WIN32
 extern "C" __declspec(dllexport) void riscvm_run(riscvm_ptr self);
+#else
+extern "C" void riscvm_run(riscvm_ptr self);
+#endif

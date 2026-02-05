@@ -6,15 +6,17 @@ enum class e_syscall : uint32_t
     exit  = 10000,
     abort = 10001,
 
-    // malloc    = 10002,
-    // calloc    = 10003,
-    // realloc   = 10004,
-    // free      = 10005,
+    malloc  = 10002,
+    calloc  = 10003,
+    realloc = 10004,
+    free    = 10005,
 
     memcpy  = 10006,
     memset  = 10007,
     memmove = 10008,
     memcmp  = 10009,
+    strlen  = 10010,
+    strncmp = 10011,
 
     print_wstring = 10100,
     print_string = 10101,
@@ -134,6 +136,36 @@ ALWAYS_INLINE inline void* sys_memmove(void* vdest, const void* vsrc, uint64_t s
 ALWAYS_INLINE inline int sys_memcmp(const void* vdest, const void* vsrc, uint64_t size)
 {
     return syscall(e_syscall::memcmp, (long)vdest, (long)vsrc, (long)size);
+}
+
+ALWAYS_INLINE inline uint64_t sys_strlen(const char* str)
+{
+    return syscall(e_syscall::strlen, (long)str);
+}
+
+ALWAYS_INLINE inline int sys_strncmp(const char* s1, const char* s2, uint64_t n)
+{
+    return syscall(e_syscall::strncmp, (long)s1, (long)s2, (long)n);
+}
+
+ALWAYS_INLINE inline void* sys_malloc(uint64_t size)
+{
+    return (void*)(uintptr_t)syscall(e_syscall::malloc, (long)size);
+}
+
+ALWAYS_INLINE inline void* sys_calloc(uint64_t num, uint64_t size)
+{
+    return (void*)(uintptr_t)syscall(e_syscall::calloc, (long)num, (long)size);
+}
+
+ALWAYS_INLINE inline void* sys_realloc(void* ptr, uint64_t size)
+{
+    return (void*)(uintptr_t)syscall(e_syscall::realloc, (long)ptr, (long)size);
+}
+
+ALWAYS_INLINE inline void sys_free(void* ptr)
+{
+    syscall(e_syscall::free, (long)ptr);
 }
 
 ALWAYS_INLINE inline void sys_exit(long status)

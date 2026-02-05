@@ -2,6 +2,11 @@
 #include <cstddef>
 #include <cstdlib>
 
+#ifndef _WIN32
+#include <strings.h>
+#define _stricmp strcasecmp
+#endif
+
 #include "riscvm.h"
 
 int main(int argc, char** argv)
@@ -16,11 +21,27 @@ int main(int argc, char** argv)
     riscvm_loadfile(machine, argv[1]);
 
 #ifdef _DEBUG
-    g_trace = argc > 2 && _stricmp(argv[2], "--trace") == 0;
+    g_trace = false;
+    const char* trace_file = "trace.txt";
+    for (int i = 2; i < argc; i++)
+    {
+        if (_stricmp(argv[i], "--trace") == 0)
+        {
+            g_trace = true;
+        }
+        else if (_stricmp(argv[i], "--trace-file") == 0 && i + 1 < argc)
+        {
+            trace_file = argv[++i];
+        }
+    }
     if (g_trace)
     {
-        // TODO: allow custom trace file location/name
-        machine->trace = fopen("trace.txt", "w");
+        machine->trace = fopen(trace_file, "w");
+        if (!machine->trace)
+        {
+            log("failed to open trace file: %s\n", trace_file);
+            return EXIT_FAILURE;
+        }
     }
 #endif // _DEBUG
 

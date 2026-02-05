@@ -61,8 +61,9 @@ void riscvm_loadfile(riscvm_ptr self, const char* filename)
         uint32_t magic;
         struct
         {
-            bool encrypted : 1;
-            bool shuffled  : 1;
+            bool encrypted      : 1;
+            bool shuffled       : 1;
+            bool data_encrypted : 1;
         };
         uint32_t key;
     };
@@ -169,6 +170,37 @@ ALWAYS_INLINE static bool riscvm_handle_syscall(riscvm_ptr self, uint64_t code, 
         return false;
     }
 
+    case 10002: // malloc
+    {
+        size_t size = (size_t)reg_read(reg_a0);
+        result      = (uint64_t)malloc(size);
+        break;
+    }
+
+    case 10003: // calloc
+    {
+        size_t num  = (size_t)reg_read(reg_a0);
+        size_t size = (size_t)reg_read(reg_a1);
+        result      = (uint64_t)calloc(num, size);
+        break;
+    }
+
+    case 10004: // realloc
+    {
+        void*  ptr  = riscvm_getptr(self, reg_read(reg_a0));
+        size_t size = (size_t)reg_read(reg_a1);
+        result      = (uint64_t)realloc(ptr, size);
+        break;
+    }
+
+    case 10005: // free
+    {
+        void* ptr = riscvm_getptr(self, reg_read(reg_a0));
+        free(ptr);
+        result = 0;
+        break;
+    }
+
     case 10006: // memcpy
     {
         void* src  = riscvm_getptr(self, reg_read(reg_a0));
@@ -200,6 +232,21 @@ ALWAYS_INLINE static bool riscvm_handle_syscall(riscvm_ptr self, uint64_t code, 
         void* src1 = riscvm_getptr(self, reg_read(reg_a0));
         void* src2 = riscvm_getptr(self, reg_read(reg_a1));
         result     = (uint64_t)memcmp(src1, src2, (size_t)reg_read(reg_a2));
+        break;
+    }
+
+    case 10010: // strlen
+    {
+        char* str = (char*)riscvm_getptr(self, reg_read(reg_a0));
+        result    = (uint64_t)strlen(str);
+        break;
+    }
+
+    case 10011: // strncmp
+    {
+        char* s1 = (char*)riscvm_getptr(self, reg_read(reg_a0));
+        char* s2 = (char*)riscvm_getptr(self, reg_read(reg_a1));
+        result   = (uint64_t)(int64_t)strncmp(s1, s2, (size_t)reg_read(reg_a2));
         break;
     }
 
